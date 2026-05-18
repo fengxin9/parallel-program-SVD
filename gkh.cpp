@@ -555,11 +555,17 @@ void destroy_thread_pool() {
     g_pool.initialized = false;
 }
 
-// 并行处理函数（使用线程池 + 动态任务队列）
+// 并行处理函数（线程池 + 动态任务队列）
 void process_blocks_parallel(Matrix& U, Matrix& B, Matrix& V,
                               std::vector<Block>& blocks) {
     int nblocks = blocks.size();
     if (nblocks == 0) return;
+
+    // 按子块大小升序排序，因为是从右到左填充，大块需要先处理就要放在blocks的后面
+    // 不排序就去掉这段
+    std::sort(blocks.begin(), blocks.end(), [](const Block& a, const Block& b) {
+        return (a.r - a.l) < (b.r - b.l);   
+    });
     
     // 将 blocks 转换为任务数组
     g_pool.tasks = new Task[nblocks];
