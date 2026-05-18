@@ -7,10 +7,10 @@
 #include <stdexcept>
 #include <vector>
 #include <arm_neon.h>
+#include <pthread.h>
 
 namespace
 {
-
     // 活动块 [l, r]（闭区间）表示一个尚未完全收敛的上二对角子问题。
     // 在该区间内，超对角线元素非零，你可以认为通过这个抽象结构给矩阵“分块”。
     struct Block
@@ -355,6 +355,251 @@ namespace
 
 } // namespace
 
+// 以下为并行模块
+// 锁结构
+struct RegionLocks {
+    pthread_mutex_t* U_locks;
+    pthread_mutex_t* V_locks;
+    int num_regions;
+    int region_size;  // 每个分区包含多少列
+    int total_cols;   // 矩阵总列数
+};
+
+RegionLocks g_locks = {nullptr, nullptr, 0, 0, 0};
+
+// 根据矩阵大小计算分区数
+int get_num_regions(int n) {
+    if (n < 10) return n;           // 小矩阵不分区
+    if (n < 100) return 16;         // 中等矩阵分16区
+    return 32;                      // 大矩阵分32区
+}
+
+// 初始化分区锁
+void init_region_locks(int n) {
+    int num_regions = get_num_regions(n);
+    
+    g_locks.num_regions = num_regions;
+    g_locks.region_size = (n + num_regions - 1) / num_regions;   // 计算区域大小，向上取整
+    g_locks.total_cols = n;
+    
+    // 分配锁数组
+    g_locks.U_locks = new pthread_mutex_t[num_regions];
+    g_locks.V_locks = new pthread_mutex_t[num_regions];
+    
+    // 初始化锁
+    for (int i = 0; i < num_regions; ++i) {
+        pthread_mutex_init(&g_locks.U_locks[i], nullptr);
+        pthread_mutex_init(&g_locks.V_locks[i], nullptr);
+    }
+}
+
+// 销毁分区锁
+void destroy_region_locks() {   
+    for (int i = 0; i < g_locks.num_regions; ++i) {
+        pthread_mutex_destroy(&g_locks.U_locks[i]);
+        pthread_mutex_destroy(&g_locks.V_locks[i]);
+    }
+    
+    delete[] g_locks.U_locks;
+    delete[] g_locks.V_locks;
+    g_locks.U_locks = nullptr;
+    g_locks.V_locks = nullptr;
+    g_locks.num_regions = 0;
+}
+
+// 根据列号获取分区索引
+int get_region_id(int col) {
+    int region_id = col / g_locks.region_size;
+    if (region_id >= g_locks.num_regions) region_id = g_locks.num_regions - 1;
+    return region_id;
+}
+
+// 带锁的one_block_step函数
+void one_block_step_with_lock(Matrix& U, Matrix& B, Matrix& V, int l, int r) {
+    // 收集这个块涉及的所有列，锁住这些列所在的所有分区
+    int start_col = l;
+    int end_col = r + 1;
+    int start_region = get_region_id(start_col);
+    int end_region = get_region_id(end_col);
+    
+    // 按顺序加锁所有涉及的分区
+    for (int reg = start_region; reg <= end_region; ++reg) {
+        pthread_mutex_lock(&g_locks.U_locks[reg]);
+        pthread_mutex_lock(&g_locks.V_locks[reg]);
+    }
+    
+    one_block_step(U, B, V, l, r);
+    
+    // 解锁
+    for (int reg = start_region; reg <= end_region; ++reg) {
+        pthread_mutex_unlock(&g_locks.V_locks[reg]);
+        pthread_mutex_unlock(&g_locks.U_locks[reg]);
+    }
+}
+
+// 线程参数，包括矩阵和分块信息，以及该线程负责处理的块的范围索引
+struct ThreadParam {
+    Matrix* U;
+    Matrix* B;
+    Matrix* V;
+    std::vector<Block>* blocks;
+    int start_idx;   
+    int end_idx;    
+};
+
+// 以下为线程池+动态任务队列
+struct Task {
+    int l;
+    int r;
+};
+
+struct ThreadPool {
+    pthread_t workers[7];           // 7个子线程
+    pthread_mutex_t queue_mutex;    // 加锁保护任务队列
+    pthread_cond_t queue_cond;      // 唤醒线程
+    pthread_cond_t done_cond;       // 主线程等待所有任务完成
+    volatile int tasks_remaining;   // 剩余任务数
+    volatile bool stop;             // 是否停止线程池
+    volatile bool has_work;         // 是否有待处理任务
+    
+    // 当前任务队列
+    Task* tasks;                   
+    int task_count;                
+    int next_task_idx;  // 下一个待分配的任务索引
+    
+    Matrix* U;
+    Matrix* B;
+    Matrix* V;  
+    bool initialized;
+};
+
+static ThreadPool g_pool = {};
+
+// 工作线程函数
+void* worker_thread(void* arg) {
+    while (true) {
+        pthread_mutex_lock(&g_pool.queue_mutex);
+        // 等待有任务或者需要停止
+        while (!g_pool.stop && !g_pool.has_work) {
+            pthread_cond_wait(&g_pool.queue_cond, &g_pool.queue_mutex);
+        }
+        
+        if (g_pool.stop) {
+            pthread_mutex_unlock(&g_pool.queue_mutex);
+            break;
+        }
+        
+        // 领取任务
+        if (g_pool.next_task_idx < g_pool.task_count) {
+            int idx = g_pool.next_task_idx++;
+            Task task = g_pool.tasks[idx];
+            pthread_mutex_unlock(&g_pool.queue_mutex);
+            
+            // 执行任务
+            one_block_step_with_lock(*(g_pool.U), *(g_pool.B), *(g_pool.V), task.l, task.r);
+            
+            // 完成一个任务，减少剩余计数
+            pthread_mutex_lock(&g_pool.queue_mutex);
+            g_pool.tasks_remaining--;
+            if (g_pool.tasks_remaining == 0) {   // 所有任务完成，唤醒主线程
+                pthread_cond_signal(&g_pool.done_cond);
+            }
+            pthread_mutex_unlock(&g_pool.queue_mutex);
+        } else {    // 没有任务时修改has_work为0
+            g_pool.has_work = false;
+            pthread_mutex_unlock(&g_pool.queue_mutex);
+        }
+    }
+    return nullptr;
+}
+
+// 初始化线程池
+void init_thread_pool() {
+    if (g_pool.initialized) return;
+    
+    g_pool.initialized = true;
+    pthread_mutex_init(&g_pool.queue_mutex, nullptr);
+    pthread_cond_init(&g_pool.queue_cond, nullptr);
+    pthread_cond_init(&g_pool.done_cond, nullptr);
+    g_pool.stop = false;
+    g_pool.has_work = false;
+    g_pool.tasks = nullptr;
+    g_pool.task_count = 0;
+    g_pool.next_task_idx = 0;
+    g_pool.tasks_remaining = 0;
+    
+    // 创建7个子线程
+    for (int t = 0; t < 7; ++t) {
+        pthread_create(&g_pool.workers[t], nullptr, worker_thread, nullptr);
+    }
+}
+
+// 销毁线程池
+void destroy_thread_pool() {
+    if (!g_pool.initialized) return;
+    
+    // 通知所有线程停止
+    pthread_mutex_lock(&g_pool.queue_mutex);
+    g_pool.stop = true;
+    pthread_cond_broadcast(&g_pool.queue_cond);
+    pthread_mutex_unlock(&g_pool.queue_mutex);
+    
+    // 等待所有线程结束
+    for (int t = 0; t < 7; ++t) {
+        pthread_join(g_pool.workers[t], nullptr);
+    }
+    
+    pthread_mutex_destroy(&g_pool.queue_mutex);
+    pthread_cond_destroy(&g_pool.queue_cond);
+    pthread_cond_destroy(&g_pool.done_cond);
+    g_pool.initialized = false;
+}
+
+// 并行处理函数（线程池 + 动态任务队列，主线程不参与计算）
+void process_blocks_parallel(Matrix& U, Matrix& B, Matrix& V,
+                              std::vector<Block>& blocks) {
+    int nblocks = blocks.size();
+    if (nblocks == 0) return;
+
+    // 按子块大小升序排序，因为是从右到左填充，大块需要先处理就要放在blocks的后面
+    std::sort(blocks.begin(), blocks.end(), [](const Block& a, const Block& b) {
+        return (a.r - a.l) < (b.r - b.l);   
+    });
+    
+    // 将 blocks 转换为任务数组
+    g_pool.tasks = new Task[nblocks];
+    g_pool.task_count = nblocks;
+    
+    // 按从右到左的顺序填充任务队列
+    for (int i = 0; i < nblocks; ++i) {
+        g_pool.tasks[i].l = blocks[nblocks - 1 - i].l;
+        g_pool.tasks[i].r = blocks[nblocks - 1 - i].r;
+    }
+    
+    g_pool.U = &U;
+    g_pool.B = &B;
+    g_pool.V = &V;
+    
+    // 重置任务队列状态
+    pthread_mutex_lock(&g_pool.queue_mutex);
+    g_pool.next_task_idx = 0;
+    g_pool.tasks_remaining = nblocks;  // 所有任务都由子线程完成
+    g_pool.has_work = true;
+    pthread_cond_broadcast(&g_pool.queue_cond);  // 唤醒所有工作线程
+    pthread_mutex_unlock(&g_pool.queue_mutex);
+    
+    // 主线程不参与计算，只等待所有子线程完成
+    pthread_mutex_lock(&g_pool.queue_mutex);
+    while (g_pool.tasks_remaining > 0) {
+        pthread_cond_wait(&g_pool.done_cond, &g_pool.queue_mutex);
+    }
+    pthread_mutex_unlock(&g_pool.queue_mutex);
+    
+    // 清理任务数组
+    delete[] g_pool.tasks;
+    g_pool.tasks = nullptr;
+}
+
 // 从“上二对角矩阵 B”出发执行 Golub-Kahan SVD 迭代（改进版）：
 // - 输入输出满足 A = U * B * V^T 不变；
 // - 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
@@ -363,6 +608,10 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
 {
     const int m = B.rows();
     const int n = B.cols();
+
+    // 初始化分区锁和线程池
+    init_region_locks(n);
+    init_thread_pool();
 
     if (m < n)
     {
@@ -408,13 +657,7 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
         }
 
         // 从右到左处理每个非平凡块，减少末端块对前面块的干扰。
-        for (int i = static_cast<int>(blocks.size()) - 1; i >= 0; --i)
-        {
-            if (blocks[i].r > blocks[i].l)
-            {
-                one_block_step(U, B, V, blocks[i].l, blocks[i].r);
-            }
-        }
+        process_blocks_parallel(U, B, V, blocks);   // 用并行处理函数代替one_block_step循环体
     }
 
     // 迭代结束后统一结构清理与标准化输出。
@@ -424,6 +667,10 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
         B.at(i, i + 1) = 0.0;
     }
     make_nonnegative_and_sort(U, B, V);
+
+    // 函数返回前销毁锁和线程池
+    destroy_region_locks();
+    destroy_thread_pool();
 
     return converged;
 }
