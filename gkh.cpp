@@ -454,7 +454,7 @@ struct Task {
 };
 
 struct ThreadPool {
-    pthread_t workers[5];           // 7个子线程
+    pthread_t workers[7];           // 7个子线程
     pthread_mutex_t queue_mutex;    // 加锁保护任务队列
     pthread_cond_t queue_cond;      // 唤醒线程
     pthread_cond_t done_cond;       // 主线程等待所有任务完成
@@ -529,7 +529,7 @@ void init_thread_pool() {
     g_pool.tasks_remaining = 0;
     
     // 创建7个子线程
-    for (int t = 0; t < 5; ++t) {
+    for (int t = 0; t < 7; ++t) {
         pthread_create(&g_pool.workers[t], nullptr, worker_thread, nullptr);
     }
 }
@@ -545,7 +545,7 @@ void destroy_thread_pool() {
     pthread_mutex_unlock(&g_pool.queue_mutex);
     
     // 等待所有线程结束
-    for (int t = 0; t < 5; ++t) {
+    for (int t = 0; t < 7; ++t) {
         pthread_join(g_pool.workers[t], nullptr);
     }
     
@@ -555,13 +555,14 @@ void destroy_thread_pool() {
     g_pool.initialized = false;
 }
 
-// 并行处理函数（线程池 + 动态任务队列，主线程不参与计算）
+// 并行处理函数（线程池 + 动态任务队列）
 void process_blocks_parallel(Matrix& U, Matrix& B, Matrix& V,
                               std::vector<Block>& blocks) {
     int nblocks = blocks.size();
     if (nblocks == 0) return;
 
     // 按子块大小升序排序，因为是从右到左填充，大块需要先处理就要放在blocks的后面
+    // 不排序就去掉这段
     std::sort(blocks.begin(), blocks.end(), [](const Block& a, const Block& b) {
         return (a.r - a.l) < (b.r - b.l);   
     });
@@ -583,12 +584,40 @@ void process_blocks_parallel(Matrix& U, Matrix& B, Matrix& V,
     // 重置任务队列状态
     pthread_mutex_lock(&g_pool.queue_mutex);
     g_pool.next_task_idx = 0;
-    g_pool.tasks_remaining = nblocks;  // 所有任务都由子线程完成
+    g_pool.tasks_remaining = nblocks;  // 主线程也参与
     g_pool.has_work = true;
     pthread_cond_broadcast(&g_pool.queue_cond);  // 唤醒所有工作线程
     pthread_mutex_unlock(&g_pool.queue_mutex);
     
-    // 主线程不参与计算，只等待所有子线程完成
+    // 主线程参与计算
+    while (true) {
+        pthread_mutex_lock(&g_pool.queue_mutex);
+
+        if (g_pool.next_task_idx >= g_pool.task_count) {
+            pthread_mutex_unlock(&g_pool.queue_mutex);
+            break;
+        }
+        
+        // 领取任务
+        int idx = g_pool.next_task_idx++;
+        Task task = g_pool.tasks[idx];
+        pthread_mutex_unlock(&g_pool.queue_mutex);
+        
+        // 执行任务
+        if (task.r > task.l) {
+            one_block_step_with_lock(U, B, V, task.l, task.r);
+        }
+        
+        // 减少剩余计数
+        pthread_mutex_lock(&g_pool.queue_mutex);
+        g_pool.tasks_remaining--;
+        if (g_pool.tasks_remaining == 0) {
+            pthread_cond_signal(&g_pool.done_cond);
+        }
+        pthread_mutex_unlock(&g_pool.queue_mutex);
+    }
+    
+    // 等待所有子线程完成
     pthread_mutex_lock(&g_pool.queue_mutex);
     while (g_pool.tasks_remaining > 0) {
         pthread_cond_wait(&g_pool.done_cond, &g_pool.queue_mutex);
