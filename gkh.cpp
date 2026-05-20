@@ -361,18 +361,16 @@ void process_blocks_parallel_openMP(Matrix& U, Matrix& B, Matrix& V, std::vector
     int nblocks = blocks.size();
     if (nblocks == 0) return;
 
-    std::sort(blocks.begin(), blocks.end(), [](const Block& a, const Block& b) {
-        return (a.r - a.l) > (b.r - b.l);
-    });        // 先对子块排序
     
-    int num_threads = 5;
     
-    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 1)
+    int num_threads = 8;
+    
+    #pragma omp parallel for num_threads(num_threads) // schedule(dynamic, 1)
     // 使用openMP命令并行处理，自动进行任务调度
     for (int i = 0; i < nblocks; ++i) {
         if (blocks[i].r > blocks[i].l) {
             // critical 指令自动处理数据竞争
-            #pragma omp critical
+             #pragma omp critical
             {
                 one_block_step(U, B, V, blocks[i].l, blocks[i].r);
             }
