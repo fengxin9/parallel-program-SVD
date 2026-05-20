@@ -454,7 +454,7 @@ struct Task {
 };
 
 struct ThreadPool {
-    pthread_t workers[4];           // 7个子线程
+    pthread_t workers[7];           // 7个子线程
     pthread_mutex_t queue_mutex;    // 加锁保护任务队列
     pthread_cond_t queue_cond;      // 唤醒线程
     pthread_cond_t done_cond;       // 主线程等待所有任务完成
@@ -529,7 +529,7 @@ void init_thread_pool() {
     g_pool.tasks_remaining = 0;
     
     // 创建7个子线程
-    for (int t = 0; t < 4; ++t) {
+    for (int t = 0; t < 7; ++t) {
         pthread_create(&g_pool.workers[t], nullptr, worker_thread, nullptr);
     }
 }
@@ -545,7 +545,7 @@ void destroy_thread_pool() {
     pthread_mutex_unlock(&g_pool.queue_mutex);
     
     // 等待所有线程结束
-    for (int t = 0; t < 4; ++t) {
+    for (int t = 0; t < 7; ++t) {
         pthread_join(g_pool.workers[t], nullptr);
     }
     
