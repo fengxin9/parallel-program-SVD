@@ -7,8 +7,8 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.02949
-  time gkh iteration(ms)    : 0.03287
+  time bidiagonalization(ms): 0.03096
+  time gkh iteration(ms)    : 0.544711
   结果: PASS
 
 === 随机 8x8 ===
@@ -20,8 +20,8 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01001
-  time gkh iteration(ms)    : 0.01799
+  time bidiagonalization(ms): 0.01076
+  time gkh iteration(ms)    : 0.15046
   结果: PASS
 
 === 近秩亏损 10x8 ===
@@ -33,8 +33,8 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01133
-  time gkh iteration(ms)    : 0.0192
+  time bidiagonalization(ms): 0.01142
+  time gkh iteration(ms)    : 0.16418
   结果: PASS
 
 === 随机 10x8 ===
@@ -46,8 +46,8 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00743
-  time gkh iteration(ms)    : 0.01617
+  time bidiagonalization(ms): 0.00754
+  time gkh iteration(ms)    : 0.13657
   结果: PASS
 
 === 随机 1000x1000 ===
@@ -59,14 +59,14 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 4993.44
-  time gkh iteration(ms)    : 18254.2
+  time bidiagonalization(ms): 5719.07
+  time gkh iteration(ms)    : 39051.6
   结果: PASS
 
 ==============================
 随机种子基值: 20260516
-总上二对角化耗时(ms): 4993.5
-总GKH迭代耗时(ms): 18254.3
+总上二对角化耗时(ms): 5719.13
+总GKH迭代耗时(ms): 39052.6
 通过: 5 / 5
 
 Authorized users only. All activities may be monitored and reported.

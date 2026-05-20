@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 #include <arm_neon.h>
+#include <omp.h>
 
 namespace
 {
@@ -355,6 +356,30 @@ namespace
 
 } // namespace
 
+// openMP版本的并行函数
+void process_blocks_parallel_openMP(Matrix& U, Matrix& B, Matrix& V, std::vector<Block>& blocks) {
+    int nblocks = blocks.size();
+    if (nblocks == 0) return;
+
+    std::sort(blocks.begin(), blocks.end(), [](const Block& a, const Block& b) {
+        return (a.r - a.l) > (b.r - b.l);
+    });        // 先对子块排序
+    
+    int num_threads = 8;
+    
+    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 1)
+    // 使用openMP命令并行处理，自动进行任务调度
+    for (int i = 0; i < nblocks; ++i) {
+        if (blocks[i].r > blocks[i].l) {
+            // critical 指令自动处理数据竞争
+            #pragma omp critical
+            {
+                one_block_step(U, B, V, blocks[i].l, blocks[i].r);
+            }
+        }
+    }
+}
+
 // 从“上二对角矩阵 B”出发执行 Golub-Kahan SVD 迭代（改进版）：
 // - 输入输出满足 A = U * B * V^T 不变；
 // - 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
@@ -408,13 +433,8 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
         }
 
         // 从右到左处理每个非平凡块，减少末端块对前面块的干扰。
-        for (int i = static_cast<int>(blocks.size()) - 1; i >= 0; --i)
-        {
-            if (blocks[i].r > blocks[i].l)
-            {
-                one_block_step(U, B, V, blocks[i].l, blocks[i].r);
-            }
-        }
+        // 使用 OpenMP 并行处理
+        process_blocks_parallel_openMP(U, B, V, blocks);
     }
 
     // 迭代结束后统一结构清理与标准化输出。
