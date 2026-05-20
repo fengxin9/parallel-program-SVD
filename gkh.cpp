@@ -365,7 +365,7 @@ void process_blocks_parallel_openMP(Matrix& U, Matrix& B, Matrix& V, std::vector
         return (a.r - a.l) > (b.r - b.l);
     });        // 先对子块排序
     
-    int num_threads = 8;
+    int num_threads = 5;
     
     #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 1)
     // 使用openMP命令并行处理，自动进行任务调度
