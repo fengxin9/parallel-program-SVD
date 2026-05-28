@@ -374,11 +374,11 @@ static const int MPI_TAG_DONE       = 104;  // 从进程通知主进程自己已
 static const int MPI_TAG_FINAL_U    = 105;  // 从进程发送最终U矩阵
 static const int MPI_TAG_FINAL_V    = 106;  // 发送V矩阵
 static const int MPI_TAG_FINAL_B    = 107;  // 发送B矩阵
-static const int MPI_TAG_B_SYNC     = 108;  // B矩阵对角/超对角同步
+static const int MPI_TAG_B_SYNC     = 108;  // B矩阵同步
 static const int MPI_TAG_REQ_FINAL  = 109;  // 主进程请求从进程发送最终数据
-static const int MPI_TAG_WAIT       = 110;  // 主进程通知从进程暂时等待（队列空但仍有从进程在算）
-static const int MPI_TAG_UV_SEND    = 111;  // U/V列同步（主→从 或 从→主，按通信上下文区分）
-static const int MPI_TAG_UV_RECV    = 112;  // U/V列同步返回（从→主）
+static const int MPI_TAG_WAIT       = 110;  // 主进程通知从进程暂时等待
+static const int MPI_TAG_UV_SEND    = 111;  // U/V列同步
+static const int MPI_TAG_UV_RECV    = 112;  // U/V列同步返回
 
 // 发送子块的辅助函数
 static void mpi_send_block(int dest, const Block& blk, int tag) {
@@ -393,10 +393,7 @@ static Block mpi_recv_block(int src, int tag, MPI_Status* status) {
     return {data[0], data[1]};
 }
 
-// 按块范围[l, r]打包B的对角线和超对角线（含边界扩展）
-// one_block_step/chase_zero_diagonal 会通过左右乘修改 B[l-1,l] 和 B[r,r+1]，
-// 因此超对角线打包范围需扩展到 [max(0,l-1), min(n-2,r)]。
-// 缓冲区布局：先diag[l..r]共diag_len个，再super[super_l..super_r]共super_len个
+// 按块范围[l, r]打包B的对角线和超对角线
 static std::vector<double> pack_b_range(const Matrix& B, int l, int r, int n) {
     int diag_len = r - l + 1;
     int super_l = (l > 0) ? l - 1 : 0;
@@ -408,7 +405,7 @@ static std::vector<double> pack_b_range(const Matrix& B, int l, int r, int n) {
     return buf;
 }
 
-// 按块范围[l, r]从缓冲区恢复B的对角线和超对角线（含边界扩展）
+// 按块范围[l, r]从缓冲区恢复B的对角线和超对角线
 static void unpack_b_range(Matrix& B, int l, int r, int n, const std::vector<double>& buf) {
     int diag_len = r - l + 1;
     int super_l = (l > 0) ? l - 1 : 0;
@@ -418,7 +415,7 @@ static void unpack_b_range(Matrix& B, int l, int r, int n, const std::vector<dou
     for (int i = 0; i < super_len; ++i) B.at(super_l + i, super_l + i + 1) = buf[diag_len + i];
 }
 
-// 计算B矩阵块[l,r]的通信缓冲区长度（含边界扩展）
+// 计算B矩阵块[l,r]的通信缓冲区长度
 static int b_range_buf_len(int l, int r, int n) {
     int diag_len = r - l + 1;
     int super_l = (l > 0) ? l - 1 : 0;
@@ -473,7 +470,7 @@ static void bulge_chase_segment(Matrix& U, Matrix& B, Matrix& V, Block blk,
         }
     }
 
-    // 全局扫描分块；超对角置零的副作用限于该从进程的本地 B，后续同步会按范围更新主进程
+    // 全局扫描分块
     auto all_blocks = split_active_blocks(B, B.cols(), tol);
     for (const auto& sb : all_blocks) {
         if (sb.l >= blk.l && sb.r <= blk.r && sb.r > sb.l) {
@@ -503,12 +500,12 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
 
         // 领取块
         Block blk = mpi_recv_block(0, MPI_TAG_TASK_DATA, &status);
-        // 同步B状态（含边界扩展）
+        // 同步B状态
         int b_len = b_range_buf_len(blk.l, blk.r, n);
         std::vector<double> b_buf(b_len);
         MPI_Recv(b_buf.data(), b_len, MPI_DOUBLE, 0, MPI_TAG_B_SYNC, MPI_COMM_WORLD, &status);
         unpack_b_range(B, blk.l, blk.r, n, b_buf);
-        // 同步U/V列（仅该块范围）
+        // 同步U/V列
         mpi_recv_cols(U, 0, blk.l, blk.r, MPI_TAG_UV_SEND, &status);
         mpi_recv_cols(V, 0, blk.l, blk.r, MPI_TAG_UV_SEND, &status);
 
@@ -522,10 +519,10 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
         }
         MPI_Send(NULL, 0, MPI_INT, 0, MPI_TAG_NEW_BLOCK, MPI_COMM_WORLD);
 
-        // 回传更新后的B状态（含边界扩展）
+        // 回传更新后的B状态
         b_buf = pack_b_range(B, blk.l, blk.r, n);
         MPI_Send(b_buf.data(), b_len, MPI_DOUBLE, 0, MPI_TAG_B_SYNC, MPI_COMM_WORLD);
-        // 回传更新后的U/V列（仅该块范围）
+        // 回传更新后的U/V列
         mpi_send_cols(U, 0, blk.l, blk.r, MPI_TAG_UV_RECV);
         mpi_send_cols(V, 0, blk.l, blk.r, MPI_TAG_UV_RECV);
     }
@@ -567,12 +564,12 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
                 ++working;
                 mpi_send_block(src, blk, MPI_TAG_TASK_DATA);
 
-                // 发送B矩阵（含边界扩展）
+                // 发送B矩阵
                 std::vector<double> b_buf = pack_b_range(B, blk.l, blk.r, n);
                 int b_len = static_cast<int>(b_buf.size());
                 MPI_Send(b_buf.data(), b_len, MPI_DOUBLE, src, MPI_TAG_B_SYNC,
                          MPI_COMM_WORLD);
-                // 发送U/V列（仅该块范围）
+                // 发送U/V列
                 mpi_send_cols(U, src, blk.l, blk.r, MPI_TAG_UV_SEND);
                 mpi_send_cols(V, src, blk.l, blk.r, MPI_TAG_UV_SEND);
             }
@@ -597,7 +594,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
             std::vector<double> b_buf(b_len);
             MPI_Recv(b_buf.data(), b_len, MPI_DOUBLE, src, MPI_TAG_B_SYNC, MPI_COMM_WORLD, &status);
             unpack_b_range(B, assigned.l, assigned.r, n, b_buf);
-            // 接收更新后的U/V列，直接更新master的U/V
+            // 接收更新后的U/V列
             mpi_recv_cols(U, src, assigned.l, assigned.r, MPI_TAG_UV_RECV, &status);
             mpi_recv_cols(V, src, assigned.l, assigned.r, MPI_TAG_UV_RECV, &status);
             --working;
@@ -615,7 +612,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
 // - 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
 // - 成功收敛后，B 被整理为非负且降序的对角矩阵（其对角元即奇异值）。
 
-// 实现新的子块迭代方法和主从进程池，未进行子块排序，矩阵B每轮同步更新，U、V矩阵本地更新且最后一次性合并
+// 实现新的子块迭代方法和主从进程池，未进行子块排序，从进程等待而不直接退出
 bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, double tol)
 {
     const int m = B.rows();
@@ -637,6 +634,8 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
     int rank, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);     // 获取当前进程的rank
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);   // 获取总进程数
+
+    std::cout<< "Process " << rank << " of " << nprocs << " started." << std::endl;
 
     // 单进程采用串行算法
     if (nprocs == 1) {

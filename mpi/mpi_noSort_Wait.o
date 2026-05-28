@@ -1,4 +1,5 @@
 === 固定值 5x5 ===
+Process 0 of 8 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 3.87062e-12
   relative recon error      : 2.76663e-13
@@ -7,11 +8,12 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.0107
-  time gkh iteration(ms)    : 0.409571
+  time bidiagonalization(ms): 0.01395
+  time gkh iteration(ms)    : 0.690012
   结果: PASS
 
 === 随机 8x8 ===
+Process 0 of 8 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.41533e-14
   relative recon error      : 8.9693e-16
@@ -20,11 +22,12 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00841
-  time gkh iteration(ms)    : 0.241411
+  time bidiagonalization(ms): 0.00828
+  time gkh iteration(ms)    : 0.18124
   结果: PASS
 
 === 近秩亏损 10x8 ===
+Process 0 of 8 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.60804e-14
   relative recon error      : 1.29836e-15
@@ -33,11 +36,12 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00956
-  time gkh iteration(ms)    : 0.18961
+  time bidiagonalization(ms): 0.009501
+  time gkh iteration(ms)    : 0.19302
   结果: PASS
 
 === 随机 10x8 ===
+Process 0 of 8 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.27115e-12
   relative recon error      : 5.8344e-14
@@ -46,11 +50,47 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00743
-  time gkh iteration(ms)    : 0.17562
+  time bidiagonalization(ms): 0.00762
+  time gkh iteration(ms)    : 0.15816
   结果: PASS
 
+Process 1 of 8 started.
+Process 1 of 8 started.
+Process 1 of 8 started.
+Process 1 of 8 started.
+Process 2 of 8 started.
+Process 2 of 8 started.
+Process 2 of 8 started.
+Process 2 of 8 started.
+Process 3 of 8 started.
+Process 3 of 8 started.
+Process 3 of 8 started.
+Process 3 of 8 started.
+Process 4 of 8 started.
+Process 4 of 8 started.
+Process 4 of 8 started.
+Process 4 of 8 started.
+Process 5 of 8 started.
+Process 5 of 8 started.
+Process 5 of 8 started.
+Process 5 of 8 started.
+Process 6 of 8 started.
+Process 6 of 8 started.
+Process 6 of 8 started.
+Process 6 of 8 started.
+Process 7 of 8 started.
+Process 7 of 8 started.
+Process 7 of 8 started.
+Process 7 of 8 started.
 === 随机 1000x1000 ===
+Process 7 of 8 started.
+Process 5 of 8 started.
+Process 0 of 8 started.
+Process 1 of 8 started.
+Process 3 of 8 started.
+Process 6 of 8 started.
+Process 2 of 8 started.
+Process 4 of 8 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 2.06393e-10
   relative recon error      : 3.57072e-13
@@ -59,14 +99,14 @@
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 7630.93
-  time gkh iteration(ms)    : 30800.6
+  time bidiagonalization(ms): 8007.38
+  time gkh iteration(ms)    : 37452
   结果: PASS
 
 ==============================
 随机种子基值: 20260408
-总上二对角化耗时(ms): 7630.97
-总GKH迭代耗时(ms): 30801.6
+总上二对角化耗时(ms): 8007.42
+总GKH迭代耗时(ms): 37453.2
 通过: 5 / 5
 
 Authorized users only. All activities may be monitored and reported.
