@@ -76,6 +76,10 @@ public:
         }
     }
 
+    // 获取指向内部数据的指针，用于MPI通信
+    double* data() { return data_.data(); }
+    const double* data() const { return data_.data(); }
+
 private:
     int rows_, cols_;
     std::vector<double> data_;

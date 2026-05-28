@@ -2,6 +2,7 @@
 #PBS -N qsub
 #PBS -e test.e
 #PBS -o test.o
+#PBS -l nodes=1:ppn=8
 
 /usr/local/bin/pssh -h $PBS_NODEFILE mkdir -p /home/${USER} 1>&2
 scp master_ubss1:/home/${USER}/svd/main /home/${USER} 1>&2

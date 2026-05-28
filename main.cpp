@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <mpi.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -167,6 +168,11 @@ int main(int argc, char **argv)
     SetConsoleOutputCP(65001);
 #endif
 
+    MPI_Init(&argc, &argv);   // MPI初始化
+    
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
     const long long base_seed = (argc >= 2) ? std::stoll(argv[1]) : 20260408LL;
 
     int total = 0;
@@ -259,5 +265,7 @@ int main(int argc, char **argv)
     std::cout << "总上二对角化耗时(ms): " << sum_bidiag_ms << "\n";
     std::cout << "总GKH迭代耗时(ms): " << sum_gkh_ms << "\n";
     std::cout << "通过: " << passed << " / " << total << "\n";
+
+    MPI_Finalize();  // MPI结束
     return (passed == total) ? 0 : 1;
 }
