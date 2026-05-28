@@ -108,8 +108,7 @@ static bool nonnegative_diag(const Matrix &S)
     return true;
 }
 
-static bool run_case(const std::string &name, const Matrix &A,
-                     double &sum_bidiag_ms, double &sum_gkh_ms)
+static bool run_case(const std::string &name, const Matrix &A, double &sum_bidiag_ms, double &sum_gkh_ms)
 {
     std::cout << "=== " << name << " ===\n";
 

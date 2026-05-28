@@ -10,9 +10,9 @@ scp -r master_ubss1:/home/${USER}/svd/files/ /home/${USER}/ 1>&2
 /usr/local/bin/pscp -h $PBS_NODEFILE /home/${USER}/main /home/${USER} 1>&2
 
 if [ -n "$SVD_SEED" ]; then
-    /home/${USER}/main "$SVD_SEED"
+    /usr/local/bin/mpiexec -np 8 -machinefile $PBS_NODEFILE /home/${USER}/main "$SVD_SEED"
 else
-    /home/${USER}/main
+    /usr/local/bin/mpiexec -np 8 -machinefile $PBS_NODEFILE /home/${USER}/main
 fi
 
 rm /home/${USER}/main
