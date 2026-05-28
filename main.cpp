@@ -108,9 +108,13 @@ static bool nonnegative_diag(const Matrix &S)
     return true;
 }
 
-static bool run_case(const std::string &name, const Matrix &A, double &sum_bidiag_ms, double &sum_gkh_ms)
+static bool run_case(const std::string &name, const Matrix &A,
+                     double &sum_bidiag_ms, double &sum_gkh_ms)
 {
-    std::cout << "=== " << name << " ===\n";
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) std::cout << "=== " << name << " ===\n";
 
     using Clock = std::chrono::high_resolution_clock;
 
@@ -123,6 +127,9 @@ static bool run_case(const std::string &name, const Matrix &A, double &sum_bidia
     const auto t_beg_gkh = Clock::now();
     const bool converged = gkh_svd_from_bidiagonal(U, B, V, 6000, 1e-12);
     const auto t_end_gkh = Clock::now();
+
+    // 只有主进程做结果校验和打印，从进程的 U、B、V 未最终清理，无校验意义
+    if (rank != 0) return true;
 
     const double time_bidiag_ms = std::chrono::duration<double, std::milli>(t_end_bidiag - t_beg_bidiag).count();
     const double time_gkh_ms = std::chrono::duration<double, std::milli>(t_end_gkh - t_beg_gkh).count();
@@ -168,9 +175,10 @@ int main(int argc, char **argv)
 #endif
 
     MPI_Init(&argc, &argv);   // MPI初始化
-    
-    int rank;
+
+    int rank, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
     const long long base_seed = (argc >= 2) ? std::stoll(argv[1]) : 20260408LL;
 
@@ -207,20 +215,20 @@ int main(int argc, char **argv)
         A.at(4, 2) = 1.0;
         A.at(4, 3) = 2.0;
         A.at(4, 4) = 4.0;
-        ++total;
+        if (rank == 0) ++total;
         if (run_case("固定值 5x5", A, sum_bidiag_ms, sum_gkh_ms))
         {
-            ++passed;
+            if (rank == 0) ++passed;
         }
     }
 
     // 样例2：8x8 随机矩阵
     {
         Matrix A = Matrix::random(8, 8, -3.0, 3.0, base_seed + 1);
-        ++total;
+        if (rank == 0) ++total;
         if (run_case("随机 8x8", A, sum_bidiag_ms, sum_gkh_ms))
         {
-            ++passed;
+            if (rank == 0) ++passed;
         }
     }
 
@@ -232,38 +240,40 @@ int main(int argc, char **argv)
         {
             A.at(i, 2) = A.at(i, 0) + 1e-8 * (i + 1);
         }
-        ++total;
+        if (rank == 0) ++total;
         if (run_case("近秩亏损 10x8", A, sum_bidiag_ms, sum_gkh_ms))
         {
-            ++passed;
+            if (rank == 0) ++passed;
         }
     }
 
     // 样例4：10x8 随机矩阵
     {
         Matrix A = Matrix::random(10, 8, -4.0, 4.0, base_seed + 3);
-        ++total;
+        if (rank == 0) ++total;
         if (run_case("随机 10x8", A, sum_bidiag_ms, sum_gkh_ms))
         {
-            ++passed;
+            if (rank == 0) ++passed;
         }
     }
 
     // 样例5：大规模 1000x1000 随机矩阵
     {
         Matrix A = Matrix::random(1000, 1000, -1.0, 1.0, base_seed + 4);
-        ++total;
+        if (rank == 0) ++total;
         if (run_case("随机 1000x1000", A, sum_bidiag_ms, sum_gkh_ms))
         {
-            ++passed;
+            if (rank == 0) ++passed;
         }
     }
 
-    std::cout << "==============================\n";
-    std::cout << "随机种子基值: " << base_seed << "\n";
-    std::cout << "总上二对角化耗时(ms): " << sum_bidiag_ms << "\n";
-    std::cout << "总GKH迭代耗时(ms): " << sum_gkh_ms << "\n";
-    std::cout << "通过: " << passed << " / " << total << "\n";
+    if (rank == 0) {
+        std::cout << "==============================\n";
+        std::cout << "随机种子基值: " << base_seed << "\n";
+        std::cout << "总上二对角化耗时(ms): " << sum_bidiag_ms << "\n";
+        std::cout << "总GKH迭代耗时(ms): " << sum_gkh_ms << "\n";
+        std::cout << "通过: " << passed << " / " << total << "\n";
+    }
 
     MPI_Finalize();  // MPI结束
     return (passed == total) ? 0 : 1;
