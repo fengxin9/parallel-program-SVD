@@ -368,7 +368,7 @@ static const int MPI_TAG_DONE       = 104;  // 从进程通知主进程自己已
 static const int MPI_TAG_FINAL_U    = 105;  // 从进程发送最终U矩阵
 static const int MPI_TAG_FINAL_V    = 106;  // 发送V矩阵
 static const int MPI_TAG_FINAL_B    = 107;  // 发送B矩阵
-static const int MPI_TAG_B_SYNC     = 108;  // B矩阵同步
+static const int MPI_TAG_B_SYNC     = 108;  // B矩阵对角/超对角同步
 static const int MPI_TAG_REQ_FINAL  = 109;  // 主进程请求从进程发送最终数据
 
 // 发送子块的辅助函数
