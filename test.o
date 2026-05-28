@@ -1,72 +1,112 @@
 === 固定值 5x5 ===
+Process 0 of 8 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : 3.87072e-12
-  relative recon error      : 2.7667e-13
-  ||U^T U-I||_F             : 1.26487e-15
-  ||V^T V-I||_F             : 1.5553e-15
+  ||A-U*S*V^T||_F           : 3.87062e-12
+  relative recon error      : 2.76663e-13
+  ||U^T U-I||_F             : 1.27887e-15
+  ||V^T V-I||_F             : 1.31193e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01671
-  time gkh iteration(ms)    : 0.01973
+  time bidiagonalization(ms): 0.02711
+  time gkh iteration(ms)    : 1.07064
   结果: PASS
 
 === 随机 8x8 ===
+Process 0 of 8 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : 1.69562e-14
-  relative recon error      : 1.07456e-15
-  ||U^T U-I||_F             : 2.36826e-15
-  ||V^T V-I||_F             : 2.88035e-15
+  ||A-U*S*V^T||_F           : 1.41533e-14
+  relative recon error      : 8.9693e-16
+  ||U^T U-I||_F             : 2.12519e-15
+  ||V^T V-I||_F             : 2.08864e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.0085
-  time gkh iteration(ms)    : 0.02219
+  time bidiagonalization(ms): 0.0082
+  time gkh iteration(ms)    : 0.166371
   结果: PASS
 
 === 近秩亏损 10x8 ===
+Process 0 of 8 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : 1.65941e-14
-  relative recon error      : 1.33984e-15
-  ||U^T U-I||_F             : 2.13299e-15
-  ||V^T V-I||_F             : 2.77987e-15
+  ||A-U*S*V^T||_F           : 1.60804e-14
+  relative recon error      : 1.29836e-15
+  ||U^T U-I||_F             : 2.19248e-15
+  ||V^T V-I||_F             : 2.33052e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00924
-  time gkh iteration(ms)    : 0.0216
+  time bidiagonalization(ms): 0.00946
+  time gkh iteration(ms)    : 0.15103
   结果: PASS
 
 === 随机 10x8 ===
+Process 0 of 8 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : 1.27112e-12
-  relative recon error      : 5.83428e-14
-  ||U^T U-I||_F             : 2.32744e-15
-  ||V^T V-I||_F             : 1.81181e-15
+  ||A-U*S*V^T||_F           : 1.27115e-12
+  relative recon error      : 5.8344e-14
+  ||U^T U-I||_F             : 1.97183e-15
+  ||V^T V-I||_F             : 2.22647e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00803
-  time gkh iteration(ms)    : 0.0231
+  time bidiagonalization(ms): 0.00792
+  time gkh iteration(ms)    : 0.155601
   结果: PASS
 
 === 随机 1000x1000 ===
+Process 1 of 8 started.
+Process 1 of 8 started.
+Process 1 of 8 started.
+Process 1 of 8 started.
+Process 2 of 8 started.
+Process 2 of 8 started.
+Process 2 of 8 started.
+Process 2 of 8 started.
+Process 3 of 8 started.
+Process 3 of 8 started.
+Process 3 of 8 started.
+Process 3 of 8 started.
+Process 4 of 8 started.
+Process 4 of 8 started.
+Process 4 of 8 started.
+Process 4 of 8 started.
+Process 5 of 8 started.
+Process 5 of 8 started.
+Process 5 of 8 started.
+Process 5 of 8 started.
+Process 6 of 8 started.
+Process 6 of 8 started.
+Process 6 of 8 started.
+Process 6 of 8 started.
+Process 7 of 8 started.
+Process 7 of 8 started.
+Process 7 of 8 started.
+Process 7 of 8 started.
+Process 3 of 8 started.
+Process 5 of 8 started.
+Process 2 of 8 started.
+Process 4 of 8 started.
+Process 1 of 8 started.
+Process 7 of 8 started.
+Process 6 of 8 started.
+Process 0 of 8 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : 2.06343e-10
-  relative recon error      : 3.56986e-13
-  ||U^T U-I||_F             : 2.29962e-13
-  ||V^T V-I||_F             : 2.26441e-13
+  ||A-U*S*V^T||_F           : 2.06393e-10
+  relative recon error      : 3.57072e-13
+  ||U^T U-I||_F             : 2.29355e-13
+  ||V^T V-I||_F             : 2.25256e-13
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 7115.35
-  time gkh iteration(ms)    : 31776.6
+  time bidiagonalization(ms): 7551.5
+  time gkh iteration(ms)    : 37966
   结果: PASS
 
 ==============================
 随机种子基值: 20260408
-总上二对角化耗时(ms): 7115.4
-总GKH迭代耗时(ms): 31776.7
+总上二对角化耗时(ms): 7551.56
+总GKH迭代耗时(ms): 37967.5
 通过: 5 / 5
 
 Authorized users only. All activities may be monitored and reported.

@@ -381,9 +381,6 @@ static Block mpi_recv_block(int src, int tag, MPI_Status* status) {
 }
 
 // 按块范围[l, r]打包B的对角线和超对角线
-// one_block_step/chase_zero_diagonal 会通过左右乘修改 B[l-1,l] 和 B[r,r+1]，
-// 因此超对角线打包范围需扩展到 [max(0,l-1), min(n-2,r)]。
-// 缓冲区布局：先diag[l..r]共diag_len个，再super[super_l..super_r]共super_len个
 static std::vector<double> pack_b_range(const Matrix& B, int l, int r, int n) {
     int diag_len = r - l + 1;
     int super_l = (l > 0) ? l - 1 : 0;
@@ -484,7 +481,7 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
 
         // 领取块
         Block blk = mpi_recv_block(0, MPI_TAG_TASK_DATA, &status);
-        // 同步B状态（含边界扩展）
+        // 同步B状态
         int b_len = b_range_buf_len(blk.l, blk.r, n);
         std::vector<double> b_buf(b_len);
         MPI_Recv(b_buf.data(), b_len, MPI_DOUBLE, 0, MPI_TAG_B_SYNC, MPI_COMM_WORLD, &status);
@@ -503,7 +500,7 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
         }
         MPI_Send(NULL, 0, MPI_INT, 0, MPI_TAG_NEW_BLOCK, MPI_COMM_WORLD);
 
-        // 回传更新后的B状态（含边界扩展）
+        // 回传更新后的B状态
         b_buf = pack_b_range(B, blk.l, blk.r, n);
         MPI_Send(b_buf.data(), b_len, MPI_DOUBLE, 0, MPI_TAG_B_SYNC, MPI_COMM_WORLD);
         // 回传更新后的U/V列
@@ -540,7 +537,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
                 slave_block[src] = blk;   // 记录分配的块
                 mpi_send_block(src, blk, MPI_TAG_TASK_DATA);
 
-                // 发送B矩阵（含边界扩展）
+                // 发送B矩阵
                 std::vector<double> b_buf = pack_b_range(B, blk.l, blk.r, n);
                 int b_len = static_cast<int>(b_buf.size());
                 MPI_Send(b_buf.data(), b_len, MPI_DOUBLE, src, MPI_TAG_B_SYNC,
@@ -611,40 +608,6 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);   // 获取总进程数
 
     std::cout<< "Process " << rank << " of " << nprocs << " started." << std::endl;
-
-    // 单进程采用串行算法
-    if (nprocs == 1) {
-        bool converged = false;
-        for (int iter = 0; iter < max_iter; ++iter) {
-            cleanup_bidiagonal(B, tol);
-            handle_diagonal_zeros(U, B, V, tol);
-
-            std::vector<Block> blocks = split_active_blocks(B, n, tol);
-
-            bool all_singletons = true;
-            for (const auto &blk : blocks) {
-                if (blk.r > blk.l) { 
-                    all_singletons = false; 
-                    break; 
-                }
-            }
-            if (all_singletons) { 
-                converged = true; 
-                break; 
-            }
-
-            for (int i = static_cast<int>(blocks.size()) - 1; i >= 0; --i) {
-                if (blocks[i].r > blocks[i].l) {
-                    one_block_step(U, B, V, blocks[i].l, blocks[i].r);
-                }
-            }
-        }
-
-        cleanup_bidiagonal(B, tol);
-        for (int i = 0; i < n - 1; ++i) B.at(i, i + 1) = 0.0;
-        make_nonnegative_and_sort(U, B, V);
-        return converged;
-    }
 
     // 多进程：MPI 并行版本
     if (rank != 0) {      

@@ -530,10 +530,11 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
 
 // 主进程函数
 static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, Matrix& B, Matrix& V) {
+    auto cmp = [](const Block& a, const Block& b) { return (a.r - a.l) < (b.r - b.l); };
     auto blocks = split_active_blocks(B, n, tol);
-    std::queue<Block> task_queue;   // 维护待处理块的队列（进程池）
+    std::priority_queue<Block, std::vector<Block>, decltype(cmp)> task_queue(cmp);
     for (const auto& blk : blocks) {
-        if (blk.r > blk.l) task_queue.push(blk);  // 初始块入队
+        if (blk.r > blk.l) task_queue.push(blk);  // 初始块入队，大的优先
     }
 
     int active_slaves = nprocs - 1;  // 尚未收到 NO_MORE 的从进程数
@@ -559,7 +560,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
                     --active_slaves;
                 }
             } else {
-                Block blk = task_queue.front(); task_queue.pop();
+                Block blk = task_queue.top(); task_queue.pop();
                 slave_block[src] = blk;   // 记录分配的块
                 ++working;
                 mpi_send_block(src, blk, MPI_TAG_TASK_DATA);
