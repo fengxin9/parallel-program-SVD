@@ -484,11 +484,11 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
-    double total_time = 0.0;
-    double total_copy_time = 0.0;
+    double total_comm_time = 0.0;
+    double total_comp_time = 0.0;
 
     while (true) {
-        // 整个任务周期开始计时
+        // 整个任务周期开始计时（包括通信+计算）
         double t_cycle_start = MPI_Wtime();
 
         MPI_Send(NULL, 0, MPI_INT, 0, MPI_TAG_TASK_REQ, MPI_COMM_WORLD);
@@ -509,10 +509,6 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
 
         // 领取块
         Block blk = mpi_recv_block(0, MPI_TAG_TASK_DATA, &status);
-
-        // 记录数据拷贝开始时间
-        double t_copy_start = MPI_Wtime();
-
         // 同步B状态
         int b_len = b_range_buf_len(blk.l, blk.r, n);
         std::vector<double> b_buf(b_len);
@@ -522,13 +518,15 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
         mpi_recv_cols(U, 0, blk.l, blk.r, MPI_TAG_UV_SEND, &status);
         mpi_recv_cols(V, 0, blk.l, blk.r, MPI_TAG_UV_SEND, &status);
 
-        // 记录数据拷贝完成时间
-        double t_copy_done = MPI_Wtime();
-        total_copy_time += (t_copy_done - t_copy_start);
+        // 记录接收完成时间
+        double t_recv_done = MPI_Wtime();
 
         // bulge chase直到可分割
         std::vector<Block> new_blocks;
         bulge_chase_segment(U, B, V, blk, new_blocks, tol);
+
+        // 记录计算完成时间
+        double t_comp_done = MPI_Wtime();
 
         // 返回子块
         for (const auto& nb : new_blocks) {
@@ -544,16 +542,22 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
         mpi_send_cols(V, 0, blk.l, blk.r, MPI_TAG_UV_RECV);
 
 
-        // 记录任务周期结束时间
-        double t_cycle_done = MPI_Wtime();
-        total_time += (t_cycle_done - t_cycle_start);
+        // 记录发送完成时间
+        double t_send_done = MPI_Wtime();
+
+         // 统计
+        double comm_time = (t_recv_done - t_cycle_start) + (t_send_done - t_comp_done);
+        double comp_time = t_comp_done - t_recv_done;
+        
+        total_comm_time += comm_time;
+        total_comp_time += comp_time;
     }
     
     if (rank == 1) {
         std::cout << "\n========== Slave " << rank << " ==========" << std::endl;
-        std::cout << "Total time in task cycles: " << total_time << " seconds" << std::endl;
-        std::cout << "Total time in data copying: " << total_copy_time << " seconds" << std::endl;
-        std::cout << "Copy ratio: " << 100 * total_copy_time / total_time << "%" << std::endl;
+        std::cout << "Communication time: " << total_comm_time << " s" << std::endl;
+        std::cout << "Computation time: " << total_comp_time << " s" << std::endl;
+        std::cout << "Comm ratio: " << 100 * total_comm_time / (total_comm_time + total_comp_time) << "%" << std::endl;
     }
 }
 

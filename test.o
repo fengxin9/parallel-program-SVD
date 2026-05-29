@@ -1,681 +1,101 @@
 === 固定值 5x5 ===
-Process 0 of 32 started.
-Process 8 of 32 started.
-[Slave 8] after matrix allocation: 8 MB
-[Slave 8] after broadcast: 8 MB
-[Slave 8] after SVD computation: 8 MB
-Process 8 of 32 started.
-[Slave 8] after matrix allocation: 8 MB
-Process 1 of 32 started.
-[Slave 1] after matrix allocation: 8 MB
-Process 9 of 32 started.
-[Slave 9] after matrix allocation: 8 MB
-[Slave 9] after broadcast: 8 MB
-Process 2 of 32 started.
-[Slave 2] after matrix allocation: 8 MB
-Process 10 of 32 started.
-[Slave 10] after matrix allocation: 8 MB
-[Slave 10] after broadcast: 8 MB
-Process 3 of 32 started.
-[Slave 3] after matrix allocation: 8 MB
-Process 11 of 32 started.
-[Slave 11] after matrix allocation: 8 MB
-[Slave 11] after broadcast: 8 MB
-Process 4 of 32 started.
-[Slave 4] after matrix allocation: 8 MB
-Process 12 of 32 started.
-[Slave 12] after matrix allocation: 8 MB
-[Slave 12] after broadcast: 8 MB
-Process 5 of 32 started.
-[Slave 5] after matrix allocation: 8 MB
-Process 13 of 32 started.
-[Slave 13] after matrix allocation: 8 MB
-[Slave 13] after broadcast: 8 MB
-Process 6 of 32 started.
-[Slave 6] after matrix allocation: 8 MB
-Process 14 of 32 started.
-[Slave 14] after matrix allocation: 8 MB
-[Slave 14] after broadcast: 8 MB
-Process 7 of 32 started.
-[Slave 7] after matrix allocation: 8 MB
-Process 15 of 32 started.
-[Slave 15] after matrix allocation: 8 MB
-[Slave 15] after broadcast: 8 MB
-[Slave 9] after SVD computation: 8 MB
-Process 9 of 32 started.
-[Slave 9] after matrix allocation: 8 MB
-[Slave 10] after SVD computation: 8 MB
-Process 10 of 32 started.
-[Slave 10] after matrix allocation: 8 MB
-[Slave 11] after SVD computation: 8 MB
-Process 11 of 32 started.
-[Slave 11] after matrix allocation: 8 MB
-[Slave 12] after SVD computation: 8 MB
-Process 12 of 32 started.
-[Slave 12] after matrix allocation: 8 MB
-[Slave 13] after SVD computation: 8 MB
-Process 13 of 32 started.
-[Slave 13] after matrix allocation: 8 MB
-[Slave 14] after SVD computation: 8 MB
-Process 14 of 32 started.
-[Slave 14] after matrix allocation: 8 MB
-[Slave 15] after SVD computation: 8 MB
-Process 15 of 32 started.
-[Slave 15] after matrix allocation: 8 MB
-Process 24 of 32 started.
-[Slave 24] after matrix allocation: 8 MB
-Process 16 of 32 started.
-[Slave 16] after matrix allocation: 8 MB
+Process 0 of 4 started.
+Process 1 of 4 started.
+Process 3 of 4 started.
+
+========== Slave 1 ==========
+Communication time: 0.000119448 s
+Computation time: 1.85966e-05 s
+Comm ratio: 86.5285%
+Process 1 of 4 started.
+Process 2 of 4 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : 3.87072e-12
+  ||A-U*S*V^T||_F           : Process 2 of 4 started.
+Process 3 of 4 started.
+3.87072e-12
   relative recon error      : 2.7667e-13
   ||U^T U-I||_F             : 1.26487e-15
   ||V^T V-I||_F             : 1.5553e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01165
-  time gkh iteration(ms)    : 11.8943
+  time bidiagonalization(ms): 0.01473
+  time gkh iteration(ms)    : 1.09615
   结果: PASS
 
 === 随机 8x8 ===
-Process 0 of 32 started.
+Process 0 of 4 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.69562e-14
   relative recon error      : 1.07456e-15
   ||U^T U-I||_F             : 2.36826e-15
-  ||V^T V-I||_F             : 2.88035e-15
+  ||V^T V-I||_F             : 
+========== Slave 1 ==========
+Communication time: 0.000144005 s
+Computation time: 1.66893e-05 s
+Comm ratio: 89.6142%
+Process 2 of 4 started.
+Process 3 of 4 started.
+2.88035e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00978
-  time gkh iteration(ms)    : 0.935592
+  time bidiagonalization(ms): 0.01141
+  time gkh iteration(ms)    : 0.19422
   结果: PASS
 
 === 近秩亏损 10x8 ===
-Process 0 of 32 started.
+Process 1 of 4 started.
+Process 0 of 4 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.65941e-14
   relative recon error      : 1.33984e-15
   ||U^T U-I||_F             : 2.13299e-15
-  ||V^T V-I||_F             : 2.77987e-15
+  ||V^T V-I||_F             : 
+========== Slave 1 ==========
+Communication time: 0.000130653 s
+Computation time: 1.74046e-05 s
+Comm ratio: 88.2448%
+Process 2 of 4 started.
+Process 3 of 4 started.
+2.77987e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01241
-  time gkh iteration(ms)    : 0.441061
+  time bidiagonalization(ms): 0.0092
+  time gkh iteration(ms)    : 0.17141
   结果: PASS
 
 === 随机 10x8 ===
-Process 0 of 32 started.
-Process 25 of 32 started.
-[Slave 25] after matrix allocation: 8 MB
-Process 17 of 32 started.
-[Slave 17] after matrix allocation: 8 MB
-[Slave 1] after broadcast: 8 MB
-[Slave 1] after SVD computation: 8 MB
-Process 1 of 32 started.
-[Slave 1] after matrix allocation: 8 MB
-[Slave 1] after broadcast: 8 MB
-[Slave 1] after SVD computation: 8 MB
-Process 1 of 32 started.
-[Slave 1] after matrix allocation: 8 MB
-[Slave 1] after broadcast: 8 MB
-[Slave 1] after SVD computation: 8 MB
-Process 1 of 32 started.
-[Slave 1] after matrix allocation: 8 MB
-Process 26 of 32 started.
-[Slave 26] after matrix allocation: 8 MB
-Process 18 of 32 started.
-[Slave 18] after matrix allocation: 8 MB
-[Slave 2] after broadcast: 8 MB
-[Slave 2] after SVD computation: 8 MB
-Process 2 of 32 started.
-[Slave 2] after matrix allocation: 8 MB
-[Slave 2] after broadcast: 8 MB
-[Slave 2] after SVD computation: 9 MB
-Process 2 of 32 started.
-[Slave 2] after matrix allocation: 9 MB
-[Slave 2] after broadcast: 9 MB
-[Slave 2] after SVD computation: 9 MB
-Process 2 of 32 started.
-[Slave 2] after matrix allocation: 9 MB
-Process 27 of 32 started.
-[Slave 27] after matrix allocation: 8 MB
-Process 19 of 32 started.
-[Slave 19] after matrix allocation: 8 MB
-[Slave 3] after broadcast: 8 MB
-[Slave 3] after SVD computation: 8 MB
-Process 3 of 32 started.
-[Slave 3] after matrix allocation: 8 MB
-[Slave 3] after broadcast: 8 MB
-[Slave 3] after SVD computation: 8 MB
-Process 3 of 32 started.
-[Slave 3] after matrix allocation: 8 MB
-[Slave 3] after broadcast: 8 MB
-[Slave 3] after SVD computation: 8 MB
-Process 3 of 32 started.
-[Slave 3] after matrix allocation: 8 MB
-Process 28 of 32 started.
-[Slave 28] after matrix allocation: 8 MB
-Process 20 of 32 started.
-[Slave 20] after matrix allocation: 8 MB
-[Slave 4] after broadcast: 8 MB
-[Slave 4] after SVD computation: 8 MB
-Process 4 of 32 started.
-[Slave 4] after matrix allocation: 8 MB
-[Slave 4] after broadcast: 8 MB
-[Slave 4] after SVD computation: 8 MB
-Process 4 of 32 started.
-[Slave 4] after matrix allocation: 8 MB
-[Slave 4] after broadcast: 8 MB
-[Slave 4] after SVD computation: 8 MB
-Process 4 of 32 started.
-[Slave 4] after matrix allocation: 8 MB
-Process 29 of 32 started.
-[Slave 29] after matrix allocation: 8 MB
-Process 21 of 32 started.
-[Slave 21] after matrix allocation: 8 MB
-[Slave 5] after broadcast: 8 MB
-[Slave 5] after SVD computation: 8 MB
-Process 5 of 32 started.
-[Slave 5] after matrix allocation: 8 MB
-[Slave 5] after broadcast: 8 MB
-[Slave 5] after SVD computation: 8 MB
-Process 5 of 32 started.
-[Slave 5] after matrix allocation: 8 MB
-[Slave 5] after broadcast: 8 MB
-[Slave 5] after SVD computation: 8 MB
-Process 5 of 32 started.
-[Slave 5] after matrix allocation: 8 MB
-Process 30 of 32 started.
-[Slave 30] after matrix allocation: 8 MB
-Process 22 of 32 started.
-[Slave 22] after matrix allocation: 8 MB
-[Slave 6] after broadcast: 8 MB
-[Slave 6] after SVD computation: 8 MB
-Process 6 of 32 started.
-[Slave 6] after matrix allocation: 8 MB
-[Slave 6] after broadcast: 8 MB
-[Slave 6] after SVD computation: 8 MB
-Process 6 of 32 started.
-[Slave 6] after matrix allocation: 8 MB
-[Slave 6] after broadcast: 8 MB
-[Slave 6] after SVD computation: 8 MB
-Process 6 of 32 started.
-[Slave 6] after matrix allocation: 8 MB
-Process 31 of 32 started.
-[Slave 31] after matrix allocation: 8 MB
-Process 23 of 32 started.
-[Slave 23] after matrix allocation: 8 MB
-[Slave 7] after broadcast: 8 MB
-[Slave 7] after SVD computation: 8 MB
-Process 7 of 32 started.
-[Slave 7] after matrix allocation: 8 MB
-[Slave 7] after broadcast: 8 MB
-[Slave 7] after SVD computation: 8 MB
-Process 7 of 32 started.
-[Slave 7] after matrix allocation: 8 MB
-[Slave 7] after broadcast: 8 MB
-[Slave 7] after SVD computation: 8 MB
-Process 7 of 32 started.
-[Slave 7] after matrix allocation: 8 MB
-[Slave 24] after broadcast: 8 MB
-[Slave 16] after broadcast: 8 MB
-[Slave 16] after SVD computation: 8 MB
-Process 16 of 32 started.
-[Slave 16] after matrix allocation: 8 MB
-[Slave 25] after broadcast: 8 MB
-[Slave 17] after broadcast: 8 MB
-[Slave 26] after broadcast: 8 MB
-[Slave 18] after broadcast: 8 MB
-[Slave 27] after broadcast: 8 MB
-[Slave 19] after broadcast: 8 MB
-[Slave 28] after broadcast: 8 MB
-[Slave 20] after broadcast: 8 MB
-[Slave 29] after broadcast: 8 MB
-[Slave 21] after broadcast: 8 MB
-[Slave 30] after broadcast: 8 MB
-[Slave 22] after broadcast: 8 MB
-[Slave 31] after broadcast: 8 MB
-[Slave 23] after broadcast: 8 MB
-[Slave 8] after broadcast: 8 MB
-[Slave 8] after SVD computation: 8 MB
-Process 8 of 32 started.
-[Slave 8] after matrix allocation: 8 MB
-[Slave 8] after broadcast: 8 MB
-[Slave 8] after SVD computation: 8 MB
-Process 8 of 32 started.
-[Slave 8] after matrix allocation: 8 MB
-[Slave 8] after broadcast: 8 MB
-[Slave 8] after SVD computation: 8 MB
-[Slave 24] after SVD computation: 8 MB
-Process 24 of 32 started.
-[Slave 24] after matrix allocation: 8 MB
-[Slave 24] after broadcast: 8 MB
-[Slave 24] after SVD computation: 8 MB
-Process 24 of 32 started.
-[Slave 24] after matrix allocation: 8 MB
-[Slave 24] after broadcast: 8 MB
-[Slave 24] after SVD computation: 8 MB
-Process 24 of 32 started.
-[Slave 24] after matrix allocation: 8 MB
-[Slave 24] after broadcast: 8 MB
-[Slave 24] after SVD computation: 8 MB
-[Slave 16] after broadcast: 8 MB
-[Slave 16] after SVD computation: 8 MB
-Process 16 of 32 started.
-[Slave 16] after matrix allocation: 8 MB
-[Slave 16] after broadcast: 8 MB
-[Slave 16] after SVD computation: 8 MB
-Process 16 of 32 started.
-[Slave 16] after matrix allocation: 8 MB
-[Slave 16] after broadcast: 8 MB
-[Slave 16] after SVD computation: 8 MB
+Process 1 of 4 started.
+Process 0 of 4 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.27112e-12
-  relative recon error      : 5.83428e-14
+  relative recon error      : 
+========== Slave 1 ==========
+Communication time: 8.32081e-05 s
+Computation time: 2.21729e-05 s
+Comm ratio: 78.9593%
+5.83428e-14
   ||U^T U-I||_F             : 2.32744e-15
   ||V^T V-I||_F             : 1.81181e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00908
-  time gkh iteration(ms)    : 0.564681
+  time bidiagonalization(ms): 0.00772
+  time gkh iteration(ms)    : 0.1285
   结果: PASS
 
 === 随机 1000x1000 ===
-[Slave 9] after broadcast: 8 MB
-[Slave 9] after SVD computation: 8 MB
-Process 9 of 32 started.
-[Slave 9] after matrix allocation: 8 MB
-[Slave 9] after broadcast: 8 MB
-[Slave 9] after SVD computation: 8 MB
-Process 9 of 32 started.
-[Slave 9] after matrix allocation: 8 MB
-[Slave 9] after broadcast: 8 MB
-[Slave 9] after SVD computation: 8 MB
-[Slave 25] after SVD computation: 8 MB
-Process 25 of 32 started.
-[Slave 25] after matrix allocation: 8 MB
-[Slave 25] after broadcast: 8 MB
-[Slave 25] after SVD computation: 8 MB
-Process 25 of 32 started.
-[Slave 25] after matrix allocation: 8 MB
-[Slave 25] after broadcast: 8 MB
-[Slave 25] after SVD computation: 8 MB
-Process 25 of 32 started.
-[Slave 25] after matrix allocation: 8 MB
-[Slave 25] after broadcast: 8 MB
-[Slave 25] after SVD computation: 8 MB
-[Slave 17] after SVD computation: 8 MB
-Process 17 of 32 started.
-[Slave 17] after matrix allocation: 8 MB
-[Slave 17] after broadcast: 8 MB
-[Slave 17] after SVD computation: 8 MB
-Process 17 of 32 started.
-[Slave 17] after matrix allocation: 8 MB
-[Slave 17] after broadcast: 8 MB
-[Slave 17] after SVD computation: 8 MB
-Process 17 of 32 started.
-[Slave 17] after matrix allocation: 8 MB
-[Slave 17] after broadcast: 8 MB
-[Slave 17] after SVD computation: 8 MB
-[Slave 1] after broadcast: 8 MB
-[Slave 1] after SVD computation: 8 MB
-[Slave 10] after broadcast: 8 MB
-[Slave 10] after SVD computation: 8 MB
-Process 10 of 32 started.
-[Slave 10] after matrix allocation: 8 MB
-[Slave 10] after broadcast: 8 MB
-[Slave 10] after SVD computation: 8 MB
-Process 10 of 32 started.
-[Slave 10] after matrix allocation: 8 MB
-[Slave 10] after broadcast: 8 MB
-[Slave 10] after SVD computation: 8 MB
-[Slave 26] after SVD computation: 8 MB
-Process 26 of 32 started.
-[Slave 26] after matrix allocation: 8 MB
-[Slave 26] after broadcast: 8 MB
-[Slave 26] after SVD computation: 8 MB
-Process 26 of 32 started.
-[Slave 26] after matrix allocation: 8 MB
-[Slave 26] after broadcast: 8 MB
-[Slave 26] after SVD computation: 8 MB
-Process 26 of 32 started.
-[Slave 26] after matrix allocation: 8 MB
-[Slave 26] after broadcast: 8 MB
-[Slave 26] after SVD computation: 8 MB
-[Slave 18] after SVD computation: 8 MB
-Process 18 of 32 started.
-[Slave 18] after matrix allocation: 8 MB
-[Slave 18] after broadcast: 8 MB
-[Slave 18] after SVD computation: 8 MB
-Process 18 of 32 started.
-[Slave 18] after matrix allocation: 8 MB
-[Slave 18] after broadcast: 8 MB
-[Slave 18] after SVD computation: 8 MB
-Process 18 of 32 started.
-[Slave 18] after matrix allocation: 8 MB
-[Slave 18] after broadcast: 8 MB
-[Slave 18] after SVD computation: 8 MB
-[Slave 2] after broadcast: 9 MB
-[Slave 2] after SVD computation: 9 MB
-[Slave 11] after broadcast: 8 MB
-[Slave 11] after SVD computation: 8 MB
-Process 11 of 32 started.
-[Slave 11] after matrix allocation: 8 MB
-[Slave 11] after broadcast: 8 MB
-[Slave 11] after SVD computation: 8 MB
-Process 11 of 32 started.
-[Slave 11] after matrix allocation: 8 MB
-[Slave 11] after broadcast: 8 MB
-[Slave 11] after SVD computation: 8 MB
-[Slave 27] after SVD computation: 8 MB
-Process 27 of 32 started.
-[Slave 27] after matrix allocation: 8 MB
-[Slave 27] after broadcast: 8 MB
-[Slave 27] after SVD computation: 8 MB
-Process 27 of 32 started.
-[Slave 27] after matrix allocation: 8 MB
-[Slave 27] after broadcast: 8 MB
-[Slave 27] after SVD computation: 8 MB
-Process 27 of 32 started.
-[Slave 27] after matrix allocation: 8 MB
-[Slave 27] after broadcast: 8 MB
-[Slave 27] after SVD computation: 8 MB
-[Slave 19] after SVD computation: 8 MB
-Process 19 of 32 started.
-[Slave 19] after matrix allocation: 8 MB
-[Slave 19] after broadcast: 8 MB
-[Slave 19] after SVD computation: 8 MB
-Process 19 of 32 started.
-[Slave 19] after matrix allocation: 8 MB
-[Slave 19] after broadcast: 8 MB
-[Slave 19] after SVD computation: 8 MB
-Process 19 of 32 started.
-[Slave 19] after matrix allocation: 8 MB
-[Slave 19] after broadcast: 8 MB
-[Slave 19] after SVD computation: 8 MB
-[Slave 3] after broadcast: 8 MB
-[Slave 3] after SVD computation: 8 MB
-[Slave 12] after broadcast: 8 MB
-[Slave 12] after SVD computation: 8 MB
-Process 12 of 32 started.
-[Slave 12] after matrix allocation: 8 MB
-[Slave 12] after broadcast: 8 MB
-[Slave 12] after SVD computation: 8 MB
-Process 12 of 32 started.
-[Slave 12] after matrix allocation: 8 MB
-[Slave 12] after broadcast: 8 MB
-[Slave 12] after SVD computation: 8 MB
-[Slave 28] after SVD computation: 8 MB
-Process 28 of 32 started.
-[Slave 28] after matrix allocation: 8 MB
-[Slave 28] after broadcast: 8 MB
-[Slave 28] after SVD computation: 8 MB
-Process 28 of 32 started.
-[Slave 28] after matrix allocation: 8 MB
-[Slave 28] after broadcast: 8 MB
-[Slave 28] after SVD computation: 8 MB
-Process 28 of 32 started.
-[Slave 28] after matrix allocation: 8 MB
-[Slave 28] after broadcast: 8 MB
-[Slave 28] after SVD computation: 8 MB
-[Slave 20] after SVD computation: 8 MB
-Process 20 of 32 started.
-[Slave 20] after matrix allocation: 8 MB
-[Slave 20] after broadcast: 8 MB
-[Slave 20] after SVD computation: 8 MB
-Process 20 of 32 started.
-[Slave 20] after matrix allocation: 8 MB
-[Slave 20] after broadcast: 8 MB
-[Slave 20] after SVD computation: 8 MB
-Process 20 of 32 started.
-[Slave 20] after matrix allocation: 8 MB
-[Slave 20] after broadcast: 8 MB
-[Slave 20] after SVD computation: 8 MB
-[Slave 4] after broadcast: 8 MB
-[Slave 4] after SVD computation: 8 MB
-[Slave 13] after broadcast: 8 MB
-[Slave 13] after SVD computation: 8 MB
-Process 13 of 32 started.
-[Slave 13] after matrix allocation: 8 MB
-[Slave 13] after broadcast: 8 MB
-[Slave 13] after SVD computation: 8 MB
-Process 13 of 32 started.
-[Slave 13] after matrix allocation: 8 MB
-[Slave 13] after broadcast: 8 MB
-[Slave 13] after SVD computation: 8 MB
-[Slave 29] after SVD computation: 8 MB
-Process 29 of 32 started.
-[Slave 29] after matrix allocation: 8 MB
-[Slave 29] after broadcast: 8 MB
-[Slave 29] after SVD computation: 8 MB
-Process 29 of 32 started.
-[Slave 29] after matrix allocation: 8 MB
-[Slave 29] after broadcast: 8 MB
-[Slave 29] after SVD computation: 8 MB
-Process 29 of 32 started.
-[Slave 29] after matrix allocation: 8 MB
-[Slave 29] after broadcast: 8 MB
-[Slave 29] after SVD computation: 8 MB
-[Slave 21] after SVD computation: 8 MB
-Process 21 of 32 started.
-[Slave 21] after matrix allocation: 8 MB
-[Slave 21] after broadcast: 8 MB
-[Slave 21] after SVD computation: 8 MB
-Process 21 of 32 started.
-[Slave 21] after matrix allocation: 8 MB
-[Slave 21] after broadcast: 8 MB
-[Slave 21] after SVD computation: 8 MB
-Process 21 of 32 started.
-[Slave 21] after matrix allocation: 8 MB
-[Slave 21] after broadcast: 8 MB
-[Slave 21] after SVD computation: 8 MB
-[Slave 5] after broadcast: 8 MB
-[Slave 5] after SVD computation: 8 MB
-[Slave 14] after broadcast: 8 MB
-[Slave 14] after SVD computation: 8 MB
-Process 14 of 32 started.
-[Slave 14] after matrix allocation: 8 MB
-[Slave 14] after broadcast: 8 MB
-[Slave 14] after SVD computation: 8 MB
-Process 14 of 32 started.
-[Slave 14] after matrix allocation: 8 MB
-[Slave 14] after broadcast: 8 MB
-[Slave 14] after SVD computation: 8 MB
-[Slave 30] after SVD computation: 8 MB
-Process 30 of 32 started.
-[Slave 30] after matrix allocation: 8 MB
-[Slave 30] after broadcast: 8 MB
-[Slave 30] after SVD computation: 8 MB
-Process 30 of 32 started.
-[Slave 30] after matrix allocation: 8 MB
-[Slave 30] after broadcast: 8 MB
-[Slave 30] after SVD computation: 8 MB
-Process 30 of 32 started.
-[Slave 30] after matrix allocation: 8 MB
-[Slave 30] after broadcast: 8 MB
-[Slave 30] after SVD computation: 8 MB
-[Slave 22] after SVD computation: 8 MB
-Process 22 of 32 started.
-[Slave 22] after matrix allocation: 8 MB
-[Slave 22] after broadcast: 8 MB
-[Slave 22] after SVD computation: 8 MB
-Process 22 of 32 started.
-[Slave 22] after matrix allocation: 8 MB
-[Slave 22] after broadcast: 8 MB
-[Slave 22] after SVD computation: 8 MB
-Process 22 of 32 started.
-[Slave 22] after matrix allocation: 8 MB
-[Slave 22] after broadcast: 8 MB
-[Slave 22] after SVD computation: 8 MB
-[Slave 6] after broadcast: 8 MB
-[Slave 6] after SVD computation: 8 MB
-[Slave 15] after broadcast: 8 MB
-[Slave 15] after SVD computation: 8 MB
-Process 15 of 32 started.
-[Slave 15] after matrix allocation: 8 MB
-[Slave 15] after broadcast: 8 MB
-[Slave 15] after SVD computation: 8 MB
-Process 15 of 32 started.
-[Slave 15] after matrix allocation: 8 MB
-[Slave 15] after broadcast: 8 MB
-[Slave 15] after SVD computation: 8 MB
-[Slave 31] after SVD computation: 8 MB
-Process 31 of 32 started.
-[Slave 31] after matrix allocation: 8 MB
-[Slave 31] after broadcast: 8 MB
-[Slave 31] after SVD computation: 8 MB
-Process 31 of 32 started.
-[Slave 31] after matrix allocation: 8 MB
-[Slave 31] after broadcast: 8 MB
-[Slave 31] after SVD computation: 8 MB
-Process 31 of 32 started.
-[Slave 31] after matrix allocation: 8 MB
-[Slave 31] after broadcast: 8 MB
-[Slave 31] after SVD computation: 8 MB
-[Slave 23] after SVD computation: 8 MB
-Process 23 of 32 started.
-[Slave 23] after matrix allocation: 8 MB
-[Slave 23] after broadcast: 8 MB
-[Slave 23] after SVD computation: 8 MB
-Process 23 of 32 started.
-[Slave 23] after matrix allocation: 8 MB
-[Slave 23] after broadcast: 8 MB
-[Slave 23] after SVD computation: 8 MB
-Process 23 of 32 started.
-[Slave 23] after matrix allocation: 8 MB
-[Slave 23] after broadcast: 8 MB
-[Slave 23] after SVD computation: 8 MB
-[Slave 7] after broadcast: 8 MB
-[Slave 7] after SVD computation: 8 MB
-Process 0 of 32 started.
-Process 7 of 32 started.
-[Slave 7] after matrix allocation: 39 MB
-Process 1 of 32 started.
-[Slave 1] after matrix allocation: 39 MB
-Process 6 of 32 started.
-[Slave 6] after matrix allocation: 39 MB
-Process 3 of 32 started.
-[Slave 3] after matrix allocation: 39 MB
-Process 2 of 32 started.
-[Slave 2] after matrix allocation: 39 MB
-Process 5 of 32 started.
-[Slave 5] after matrix allocation: 39 MB
-Process 4 of 32 started.
-[Slave 4] after matrix allocation: 39 MB
-Process 11 of 32 started.
-[Slave 11] after matrix allocation: 39 MB
-Process 15 of 32 started.
-[Slave 15] after matrix allocation: 39 MB
-Process 23 of 32 started.
-[Slave 23] after matrix allocation: 39 MB
-Process 12 of 32 started.
-[Slave 12] after matrix allocation: 39 MB
-Process 16 of 32 started.
-[Slave 16] after matrix allocation: 39 MB
-Process 9 of 32 started.
-[Slave 9] after matrix allocation: 39 MB
-Process 18 of 32 started.
-[Slave 18] after matrix allocation: 39 MB
-Process 20 of 32 started.
-[Slave 20] after matrix allocation: 39 MB
-Process 26 of 32 started.
-[Slave 26] after matrix allocation: 39 MB
-Process 17 of 32 started.
-[Slave 17] after matrix allocation: 39 MB
-Process 29 of 32 started.
-[Slave 29] after matrix allocation: 39 MB
-Process 27 of 32 started.
-[Slave 27] after matrix allocation: 39 MB
-Process 21 of 32 started.
-[Slave 21] after matrix allocation: 39 MB
-Process 24 of 32 started.
-[Slave 24] after matrix allocation: 39 MB
-Process 22 of 32 started.
-[Slave 22] after matrix allocation: 39 MB
-Process 25 of 32 started.
-[Slave 25] after matrix allocation: 39 MB
-Process 14 of 32 started.
-Process 13 of 32 started.
-[Slave 14] after matrix allocation: 39 MB
-[Slave 13] after matrix allocation: 39 MB
-Process 19 of 32 started.
-[Slave 19] after matrix allocation: 39 MB
-Process 8 of 32 started.
-[Slave 8] after matrix allocation: 39 MB
-Process 28 of 32 started.
-[Slave 28] after matrix allocation: 39 MB
-Process 10 of 32 started.
-[Slave 10] after matrix allocation: 39 MB
-Process 31 of 32 started.
-[Slave 31] after matrix allocation: 39 MB
-Process 30 of 32 started.
-[Slave 30] after matrix allocation: 39 MB
-[Slave 5] after broadcast: 40 MB
-[Slave 8] after broadcast: 40 MB
-[Slave 28] after broadcast: 40 MB
-[Slave 16] after broadcast: 40 MB
-[Slave 6] after broadcast: 40 MB
-[Slave 9] after broadcast: 40 MB
-[Slave 29] after broadcast: 40 MB
-[Slave 17] after broadcast: 40 MB
-[Slave 7] after broadcast: 40 MB
-[Slave 10] after broadcast: 40 MB
-[Slave 30] after broadcast: 40 MB
-[Slave 18] after broadcast: 40 MB
-[Slave [Slave 11] after broadcast: 40 MB
-[Slave 31] after broadcast: 40 MB
-[Slave 12] after broadcast: 40 MB
-[Slave 27] after broadcast: 40 MB
-[Slave 13] after broadcast: 40 MB
-[Slave 14] after broadcast: 40 MB
-[Slave 15] after broadcast: 40 MB
-[Slave 1] after broadcast: 40 MB
-[Slave 26] after broadcast: 40 MB
-[Slave 19] after broadcast: 40 MB
-[Slave 2] after broadcast: 40 MB
-[Slave 24] after broadcast: 40 MB
-[Slave 20] after broadcast: 40 MB
-[Slave 3] after broadcast: 40 MB
-[Slave 25] after broadcast: 40 MB
-[Slave 21] after broadcast: 40 MB
-4] after broadcast: 40 MB
-[Slave 22] after broadcast: 40 MB
-[Slave 23] after broadcast: 40 MB
-[Slave 8] after SVD computation: 46 MB
-[Slave 24] after SVD computation: 47 MB
-[Slave 16] after SVD computation: 46 MB
-[Slave 9] after SVD computation: 46 MB
-[Slave 25] after SVD computation: 47 MB
-[Slave 17] after SVD computation: 46 MB
-[Slave 10] after SVD computation: 46 MB
-[Slave 26] after SVD computation: 46 MB
-[Slave 18] after SVD computation: 46 MB
-[Slave 11] after SVD computation: 47 MB
-[Slave 27] after SVD computation: 40 MB
-[Slave 19] after SVD computation: 46 MB
-[Slave 12] after SVD computation: 48 MB
-[Slave 28] after SVD computation: 41 MB
-[Slave 20] after SVD computation: 46 MB
-[Slave 13] after SVD computation: 47 MB
-[Slave 29] after SVD computation: 40 MB
-[Slave 21] after SVD computation: 46 MB
-[Slave 14] after SVD computation: 48 MB
-[Slave 30] after SVD computation: 42 MB
-[Slave 22] after SVD computation: 46 MB
-[Slave 15] after SVD computation: 47 MB
-[Slave 31] after SVD computation: 46 MB
-[Slave 23] after SVD computation: 46 MB
-[Slave 1] after SVD computation: 48 MB
-[Slave 2] after SVD computation: 49 MB
-[Slave 3] after SVD computation: 49 MB
-[Slave 4] after SVD computation: 49 MB
-[Slave 5] after SVD computation: 49 MB
-[Slave 6] after SVD computation: 49 MB
-[Slave 7] after SVD computation: 48 MB
+Process 2 of 4 started.
+Process 0 of 4 started.
+Process 1 of 4 started.
+Process 3 of 4 started.
+
+========== Slave 1 ==========
+Communication time: 4.85821 s
+Computation time: 6.67681 s
+Comm ratio: 42.1171%
   converged                 : yes
   ||A-U*S*V^T||_F           : 2.06343e-10
   relative recon error      : 3.56986e-13
@@ -684,14 +104,14 @@ Process 30 of 32 started.
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 6406.8
-  time gkh iteration(ms)    : 41318.9
+  time bidiagonalization(ms): 4739.52
+  time gkh iteration(ms)    : 33502.8
   结果: PASS
 
 ==============================
 随机种子基值: 20260408
-总上二对角化耗时(ms): 6406.84
-总GKH迭代耗时(ms): 41332.7
+总上二对角化耗时(ms): 4739.57
+总GKH迭代耗时(ms): 33504.4
 通过: 5 / 5
 
 Authorized users only. All activities may be monitored and reported.

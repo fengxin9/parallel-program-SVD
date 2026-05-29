@@ -128,7 +128,7 @@ static bool run_case(const std::string &name, const Matrix &A,
     const bool converged = gkh_svd_from_bidiagonal(U, B, V, 6000, 1e-12);
     const auto t_end_gkh = Clock::now();
 
-    // 只有主进程做结果校验和打印，从进程的 U、B、V 未最终清理，无校验意义
+    // 只有主进程做结果校验和打印
     if (rank != 0) return true;
 
     const double time_bidiag_ms = std::chrono::duration<double, std::milli>(t_end_bidiag - t_beg_bidiag).count();
