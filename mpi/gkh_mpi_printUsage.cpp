@@ -10,6 +10,8 @@
 #include <mpi.h>
 #include <queue>
 #include <cstdio>
+#include <cstring>
+#include <fstream>
 
 namespace
 {
@@ -364,6 +366,29 @@ namespace
 
 } // namespace
 
+// 打印当前进程的内存使用情况
+void print_memory_usage(const std::string& tag) {
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
+    std::ifstream statm("/proc/self/statm");
+    if (!statm.is_open()) {
+        return;
+    }
+    
+    long size, resident, share, text, lib, data, dt;
+    statm >> size >> resident >> share >> text >> lib >> data >> dt;
+    statm.close();
+    
+    // resident:物理内存占用
+    long mem_mb = resident * 4 / 1024;
+    
+    // 只让从进程（rank != 0）打印，避免输出混乱
+    if (rank != 0) {
+        std::cout << "[Slave " << rank << "] " << tag << ": " << mem_mb << " MB" << std::endl;
+    }
+}
+
 
 // MPI消息标签
 static const int MPI_TAG_TASK_REQ   = 100;  // 从进程请求任务
@@ -530,10 +555,11 @@ static void mpi_slave_process(int m, int n, double tol, Matrix& U, Matrix& B, Ma
 
 // 主进程函数
 static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, Matrix& B, Matrix& V) {
+    auto cmp = [](const Block& a, const Block& b) { return (a.r - a.l) < (b.r - b.l); };
     auto blocks = split_active_blocks(B, n, tol);
-    std::queue<Block> task_queue;   // 维护待处理块的队列（进程池）
+    std::priority_queue<Block, std::vector<Block>, decltype(cmp)> task_queue(cmp);
     for (const auto& blk : blocks) {
-        if (blk.r > blk.l) task_queue.push(blk);  // 初始块入队
+        if (blk.r > blk.l) task_queue.push(blk);  // 初始块入队，大的优先
     }
 
     int active_slaves = nprocs - 1;  // 尚未收到 NO_MORE 的从进程数
@@ -559,8 +585,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
                     --active_slaves;
                 }
             } else {
-                Block blk = task_queue.front(); 
-                task_queue.pop();
+                Block blk = task_queue.top(); task_queue.pop();
                 slave_block[src] = blk;   // 记录分配的块
                 ++working;
                 mpi_send_block(src, blk, MPI_TAG_TASK_DATA);
@@ -613,7 +638,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
 // - 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
 // - 成功收敛后，B 被整理为非负且降序的对角矩阵（其对角元即奇异值）。
 
-// 实现新的子块迭代方法和主从进程池，未进行子块排序，从进程等待而不直接退出
+// 实现新的子块迭代方法和主从进程池，进行子块排序，从进程等待而不直接退出
 bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, double tol)
 {
     const int m = B.rows();
@@ -645,15 +670,22 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
         V = Matrix(n, n);
     }
 
+    print_memory_usage("after matrix allocation");  // 分配完矩阵后
+
     // 广播初始矩阵（所有进程参与）
     MPI_Bcast(U.data(), m * m, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(B.data(), m * n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(V.data(), n * n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    print_memory_usage("after broadcast");  // 接收完广播数据后
 
     if (rank == 0) {   // 主进程负责调度
         mpi_master_process(nprocs, m, n, tol, U, B, V);
     } else {   // 从进程负责计算
         mpi_slave_process(m, n, tol, U, B, V);
     }
+
+    print_memory_usage("after SVD computation");  // 计算完成后
+
     return true;
 }

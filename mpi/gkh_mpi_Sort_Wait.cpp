@@ -560,7 +560,8 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
                     --active_slaves;
                 }
             } else {
-                Block blk = task_queue.top(); task_queue.pop();
+                Block blk = task_queue.top(); 
+                task_queue.pop();
                 slave_block[src] = blk;   // 记录分配的块
                 ++working;
                 mpi_send_block(src, blk, MPI_TAG_TASK_DATA);
