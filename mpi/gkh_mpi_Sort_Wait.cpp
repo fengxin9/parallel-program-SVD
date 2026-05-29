@@ -613,7 +613,7 @@ static void mpi_master_process(int nprocs, int m, int n, double tol, Matrix& U, 
 // - 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
 // - 成功收敛后，B 被整理为非负且降序的对角矩阵（其对角元即奇异值）。
 
-// 实现新的子块迭代方法和主从进程池，未进行子块排序，从进程等待而不直接退出
+// 实现新的子块迭代方法和主从进程池，进行子块排序，从进程等待而不直接退出
 bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, double tol)
 {
     const int m = B.rows();
