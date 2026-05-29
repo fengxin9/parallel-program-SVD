@@ -1,101 +1,241 @@
 === 固定值 5x5 ===
-Process 0 of 4 started.
-Process 1 of 4 started.
-Process 3 of 4 started.
-
-========== Slave 1 ==========
-Communication time: 0.000119448 s
-Computation time: 1.85966e-05 s
-Comm ratio: 86.5285%
-Process 1 of 4 started.
-Process 2 of 4 started.
+Process 0 of 32 started.
+Process 16 of 32 started.
+Process 24 of 32 started.
+Process 8 of 32 started.
+Process 8 of 32 started.
+Process 1 of 32 started.
+Process 17 of 32 started.
+Process 25 of 32 started.
+Process 9 of 32 started.
+Process 2 of 32 started.
+Process 18 of 32 started.
+Process 26 of 32 started.
+Process 10 of 32 started.
+Process 3 of 32 started.
+Process 19 of 32 started.
+Process 27 of 32 started.
+Process 11 of 32 started.
+Process 4 of 32 started.
+Process 20 of 32 started.
+Process 28 of 32 started.
+Process 12 of 32 started.
+Process 5 of 32 started.
+Process 21 of 32 started.
+Process 29 of 32 started.
+Process 13 of 32 started.
+Process 6 of 32 started.
+Process 22 of 32 started.
+Process 30 of 32 started.
+Process 14 of 32 started.
+Process 7 of 32 started.
+Process 23 of 32 started.
+Process 31 of 32 started.
+Process 15 of 32 started.
+Process 16 of 32 started.
   converged                 : yes
-  ||A-U*S*V^T||_F           : Process 2 of 4 started.
-Process 3 of 4 started.
-3.87072e-12
+  ||A-U*S*V^T||_F           : 3.87072e-12
   relative recon error      : 2.7667e-13
   ||U^T U-I||_F             : 1.26487e-15
   ||V^T V-I||_F             : 1.5553e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01473
-  time gkh iteration(ms)    : 1.09615
+  time bidiagonalization(ms): 0.0112
+  time gkh iteration(ms)    : 3.40449
   结果: PASS
 
 === 随机 8x8 ===
-Process 0 of 4 started.
+Process 0 of 32 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.69562e-14
   relative recon error      : 1.07456e-15
   ||U^T U-I||_F             : 2.36826e-15
-  ||V^T V-I||_F             : 
-========== Slave 1 ==========
-Communication time: 0.000144005 s
-Computation time: 1.66893e-05 s
-Comm ratio: 89.6142%
-Process 2 of 4 started.
-Process 3 of 4 started.
-2.88035e-15
+  ||V^T V-I||_F             : 2.88035e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.01141
-  time gkh iteration(ms)    : 0.19422
+  time bidiagonalization(ms): 0.00973
+  time gkh iteration(ms)    : 0.878441
   结果: PASS
 
 === 近秩亏损 10x8 ===
-Process 1 of 4 started.
-Process 0 of 4 started.
+Process 0 of 32 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.65941e-14
   relative recon error      : 1.33984e-15
   ||U^T U-I||_F             : 2.13299e-15
-  ||V^T V-I||_F             : 
-========== Slave 1 ==========
-Communication time: 0.000130653 s
-Computation time: 1.74046e-05 s
-Comm ratio: 88.2448%
-Process 2 of 4 started.
-Process 3 of 4 started.
-2.77987e-15
+  ||V^T V-I||_F             : 2.77987e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.0092
-  time gkh iteration(ms)    : 0.17141
+  time bidiagonalization(ms): 0.01696
+  time gkh iteration(ms)    : 0.59914
   结果: PASS
 
 === 随机 10x8 ===
-Process 1 of 4 started.
-Process 0 of 4 started.
+Process 0 of 32 started.
   converged                 : yes
   ||A-U*S*V^T||_F           : 1.27112e-12
-  relative recon error      : 
-========== Slave 1 ==========
-Communication time: 8.32081e-05 s
-Computation time: 2.21729e-05 s
-Comm ratio: 78.9593%
-5.83428e-14
+  relative recon error      : 5.83428e-14
   ||U^T U-I||_F             : 2.32744e-15
   ||V^T V-I||_F             : 1.81181e-15
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 0.00772
-  time gkh iteration(ms)    : 0.1285
+  time bidiagonalization(ms): 0.00918
+  time gkh iteration(ms)    : 0.4068
   结果: PASS
 
-=== 随机 1000x1000 ===
-Process 2 of 4 started.
-Process 0 of 4 started.
-Process 1 of 4 started.
-Process 3 of 4 started.
+Process 16 of 32 started.
+Process 16 of 32 started.
+Process 24 of 32 started.
+Process 24 of 32 started.
+Process 24 of 32 started.
+Process 8 of 32 started.
+Process 8 of 32 started.
 
 ========== Slave 1 ==========
-Communication time: 4.85821 s
-Computation time: 6.67681 s
-Comm ratio: 42.1171%
+Total time in task cycles: 0 seconds
+Total time in data copying: 0 seconds
+Copy ratio: nan%
+Process 1 of 32 started.
+
+========== Slave 1 ==========
+Total time in task cycles: 0.000200987 seconds
+Total time in data copying: 5.05447e-05 seconds
+Copy ratio: 25.1483%
+Process 1 of 32 started.
+
+========== Slave 1 ==========
+Total time in task cycles: 0 seconds
+Total time in data copying: 0 seconds
+Copy ratio: nan%
+Process 1 of 32 started.
+
+========== Slave 1 ==========
+Total time in task cycles: 0 seconds
+Total time in data copying: 0 seconds
+Copy ratio: nan%
+Process 17 of 32 started.
+Process 17 of 32 started.
+Process 17 of 32 started.
+Process 25 of 32 started.
+Process 25 of 32 started.
+Process 25 of 32 started.
+Process 9 of 32 started.
+Process 9 of 32 started.
+Process 9 of 32 started.
+Process 2 of 32 started.
+Process 2 of 32 started.
+Process 2 of 32 started.
+Process 18 of 32 started.
+Process 18 of 32 started.
+Process 18 of 32 started.
+Process 26 of 32 started.
+Process 26 of 32 started.
+Process 26 of 32 started.
+Process 10 of 32 started.
+Process 10 of 32 started.
+Process 10 of 32 started.
+Process 3 of 32 started.
+Process 3 of 32 started.
+Process 3 of 32 started.
+Process 19 of 32 started.
+Process 19 of 32 started.
+Process 19 of 32 started.
+Process 27 of 32 started.
+Process 27 of 32 started.
+Process 27 of 32 started.
+Process 11 of 32 started.
+Process 11 of 32 started.
+Process 11 of 32 started.
+Process 4 of 32 started.
+Process 4 of 32 started.
+Process 4 of 32 started.
+Process 20 of 32 started.
+Process 20 of 32 started.
+Process 20 of 32 started.
+Process 28 of 32 started.
+Process 28 of 32 started.
+Process 28 of 32 started.
+Process 12 of 32 started.
+Process 12 of 32 started.
+Process 12 of 32 started.
+Process 5 of 32 started.
+Process 5 of 32 started.
+Process 5 of 32 started.
+Process 21 of 32 started.
+Process 21 of 32 started.
+Process 21 of 32 started.
+Process 29 of 32 started.
+Process 29 of 32 started.
+Process 29 of 32 started.
+Process 13 of 32 started.
+Process 13 of 32 started.
+Process 13 of 32 started.
+Process 6 of 32 started.
+Process 6 of 32 started.
+Process 6 of 32 started.
+Process 22 of 32 started.
+Process 22 of 32 started.
+Process 22 of 32 started.
+Process 30 of 32 started.
+Process 30 of 32 started.
+Process 30 of 32 started.
+Process 14 of 32 started.
+Process 14 of 32 started.
+Process 14 of 32 started.
+Process 7 of 32 started.
+Process 7 of 32 started.
+Process 7 of 32 started.
+Process 23 of 32 started.
+Process 23 of 32 started.
+Process 23 of 32 started.
+Process 31 of 32 started.
+Process 31 of 32 started.
+Process 31 of 32 started.
+Process 15 of 32 started.
+Process 15 of 32 started.
+Process 15 of 32 started.
+=== 随机 1000x1000 ===
+Process 6 of 32 started.
+Process 7 of 32 started.
+Process 3 of 32 started.
+Process 5 of 32 started.
+Process 2 of 32 started.
+Process 4 of 32 started.
+Process 1 of 32 started.
+Process 0 of 32 started.
+Process 20 of 32 started.
+Process 14 of 32 started.
+Process 19 of 32 started.
+Process 17 of 32 started.
+Process 13 of 32 started.
+Process 8 of 32 started.
+Process 21 of 32 started.
+Process 16 of 32 started.
+Process 18 of 32 started.
+Process 15 of 32 started.
+Process 12 of 32 started.
+Process 31 of 32 started.
+Process 22 of 32 started.
+Process 27 of 32 started.
+Process 28 of 32 started.
+Process 26 of 32 started.
+Process 24 of 32 started.
+Process 25 of 32 started.
+Process 9 of 32 started.
+Process 10 of 32 started.
+Process 29 of 32 started.
+Process 11 of 32 started.
+Process 23 of 32 started.
+Process 30 of 32 started.
+
+========== Slave 1 ==========
+Total time in task cycles: 4.39061 seconds
+Total time in data copying: 0.665979 seconds
+Copy ratio: 15.1683%
   converged                 : yes
   ||A-U*S*V^T||_F           : 2.06343e-10
   relative recon error      : 3.56986e-13
@@ -104,14 +244,14 @@ Comm ratio: 42.1171%
   diagonal structure error  : 0
   descending order error    : 0
   nonnegative diagonal      : yes
-  time bidiagonalization(ms): 4739.52
-  time gkh iteration(ms)    : 33502.8
+  time bidiagonalization(ms): 9665.75
+  time gkh iteration(ms)    : 37452.1
   结果: PASS
 
 ==============================
 随机种子基值: 20260408
-总上二对角化耗时(ms): 4739.57
-总GKH迭代耗时(ms): 33504.4
+总上二对角化耗时(ms): 9665.8
+总GKH迭代耗时(ms): 37457.4
 通过: 5 / 5
 
 Authorized users only. All activities may be monitored and reported.
