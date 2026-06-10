@@ -20,6 +20,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
+#include <cublas_v2.h>
 #include <cuda_runtime.h>
 
 // 辅助函数，计算向量的范数（平方和开根）
@@ -29,52 +30,6 @@ static double vector_norm(const std::vector<double> &v)
     for (double x : v)
         sum += x * x;
     return std::sqrt(sum);
-}
-
-// 手写 kernel：计算 w = v^T * B_sub（左乘 GEMV）
-__global__ void gemv_left_kernel(const double *B, double *w, const double *v, int m, int n, int lda) {
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (j >= n) return;
-    double sum = 0.0;
-    for (int i = 0; i < m; ++i) {
-        sum += v[i] * B[i + j * lda];
-    }
-    w[j] = sum;
-}
-
-// 手写 kernel：计算 w = B_sub * v（右乘 GEMV）
-__global__ void gemv_right_kernel(const double *B, double *w, const double *v, int m, int n, int lda) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= m) return;
-    double sum = 0.0;
-    for (int j = 0; j < n; ++j) {
-        sum += B[i + j * lda] * v[j];
-    }
-    w[i] = sum;
-}
-
-// 手写 kernel：更新 B_sub = B_sub - beta * v * w^T（左乘 GER）
-__global__ void ger_left_kernel(double *B, const double *v, const double *w, double beta, int m, int n, int lda) {
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= m || j >= n) return;
-    B[i + j * lda] -= beta * v[i] * w[j];
-}
-
-// 手写 kernel：更新 B_sub = B_sub - beta * w * v^T（右乘 GER）
-__global__ void ger_right_kernel(double *B, const double *w, const double *v, double beta, int m, int n, int lda) {
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= m || j >= n) return;
-    B[i + j * lda] -= beta * w[i] * v[j];
-}
-
-// 手写 kernel：累积正交矩阵 U 或 V
-__global__ void update_ortho_kernel(double *Q, const double *wQ, const double *v, double beta, int m, int n, int lda) {
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= m || j >= n) return;
-    Q[i + j * lda] -= beta * wQ[i] * v[j];
 }
 
 // 将 m×n 矩阵 A（m ≥ n）化为上双对角形，返回 B，同时输出 U（m×m）和 V（n×n）
@@ -96,6 +51,10 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
     V = Matrix(n, n, 0.0);
     for (int i = 0; i < n; ++i)
         V.at(i, i) = 1.0;
+
+    // 创建 cuBLAS handle
+    cublasHandle_t handle;
+    cublasCreate(&handle);
 
     // 分配 GPU 内存（列主序存储）
     double *d_B, *d_U, *d_V, *d_v, *d_w, *d_wUV;
@@ -130,9 +89,6 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
         }
     }
     cudaMemcpy(d_V, V_col.data(), n * n * sizeof(double), cudaMemcpyHostToDevice);
-
-    // 配置 kernel 的线程块大小
-    dim3 block_size(16, 16);
 
     for (int k = 0; k < n; ++k)
     {
@@ -169,32 +125,28 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                 // 拷贝 v 到 GPU
                 cudaMemcpy(d_v, v.data(), sub_m * sizeof(double), cudaMemcpyHostToDevice);
 
-                // 配置 kernel 参数（左乘）
-                dim3 grid_gemv((sub_n + block_size.x - 1) / block_size.x, 1);
-                dim3 grid_ger((sub_n + block_size.x - 1) / block_size.x, (sub_m + block_size.y - 1) / block_size.y);
+                double alpha_one = 1.0;
+                double alpha_neg_beta = -beta;
+                double beta_cublas = 0.0;
 
                 // w = v^T * B_sub（左乘 GEMV）
-                gemv_left_kernel<<<grid_gemv, block_size>>>(d_B_sub, d_w, d_v, sub_m, sub_n, m);
+                cublasDgemv(handle, CUBLAS_OP_T, sub_m, sub_n, &alpha_one, d_B_sub, m, d_v, 1, &beta_cublas, d_w, 1);
                 cudaDeviceSynchronize();
 
                 // B_sub = B_sub - beta * v * w^T（左乘 GER）
-                ger_left_kernel<<<grid_ger, block_size>>>(d_B_sub, d_v, d_w, beta, sub_m, sub_n, m);
+                cublasDger(handle, sub_m, sub_n, &alpha_neg_beta, d_v, 1, d_w, 1, d_B_sub, m);
                 cudaDeviceSynchronize();
 
                 // 累积 U：U[:, k:m] -= beta * (U[:, k:m] * v) * v^T
                 double *d_U_sub = d_U + k * m;
                 int u_sub_n = sub_m;
 
-                // 配置 kernel 参数（U 累积）
-                dim3 grid_gemv_U((m + block_size.x - 1) / block_size.x, 1);
-                dim3 grid_ger_U((u_sub_n + block_size.x - 1) / block_size.x, (m + block_size.y - 1) / block_size.y);
-
                 // wU = U_sub * v（右乘 GEMV）
-                gemv_right_kernel<<<grid_gemv_U, block_size>>>(d_U_sub, d_wUV, d_v, m, u_sub_n, m);
+                cublasDgemv(handle, CUBLAS_OP_N, m, u_sub_n, &alpha_one, d_U_sub, m, d_v, 1, &beta_cublas, d_wUV, 1);
                 cudaDeviceSynchronize();
 
                 // U_sub = U_sub - beta * wU * v^T（右乘 GER）
-                update_ortho_kernel<<<grid_ger_U, block_size>>>(d_U_sub, d_wUV, d_v, beta, m, u_sub_n, m);
+                cublasDger(handle, m, u_sub_n, &alpha_neg_beta, d_wUV, 1, d_v, 1, d_U_sub, m);
                 cudaDeviceSynchronize();
             }
         }
@@ -240,31 +192,27 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                     // 拷贝 v 到 GPU
                     cudaMemcpy(d_v, v.data(), sub_n * sizeof(double), cudaMemcpyHostToDevice);
 
-                    // 配置 kernel 参数（右乘）
-                    dim3 grid_gemv((sub_m + block_size.x - 1) / block_size.x, 1);
-                    dim3 grid_ger((sub_n + block_size.x - 1) / block_size.x, (sub_m + block_size.y - 1) / block_size.y);
+                    double alpha_one = 1.0;
+                    double alpha_neg_beta = -beta;
+                    double beta_cublas = 0.0;
 
                     // w = B_sub * v（右乘 GEMV）
-                    gemv_right_kernel<<<grid_gemv, block_size>>>(d_B_sub, d_w, d_v, sub_m, sub_n, m);
+                    cublasDgemv(handle, CUBLAS_OP_N, sub_m, sub_n, &alpha_one, d_B_sub, m, d_v, 1, &beta_cublas, d_w, 1);
                     cudaDeviceSynchronize();
 
                     // B_sub = B_sub - beta * w * v^T（右乘 GER）
-                    ger_right_kernel<<<grid_ger, block_size>>>(d_B_sub, d_w, d_v, beta, sub_m, sub_n, m);
+                    cublasDger(handle, sub_m, sub_n, &alpha_neg_beta, d_w, 1, d_v, 1, d_B_sub, m);
                     cudaDeviceSynchronize();
 
                     // 累积 V：V[:, k+1:n] -= beta * (V[:, k+1:n] * v) * v^T
                     double *d_V_sub = d_V + (k + 1) * n;
 
-                    // 配置 kernel 参数（V 累积）
-                    dim3 grid_gemv_V((n + block_size.x - 1) / block_size.x, 1);
-                    dim3 grid_ger_V((sub_n + block_size.x - 1) / block_size.x, (n + block_size.y - 1) / block_size.y);
-
                     // wV = V_sub * v（右乘 GEMV）
-                    gemv_right_kernel<<<grid_gemv_V, block_size>>>(d_V_sub, d_wUV, d_v, n, sub_n, n);
+                    cublasDgemv(handle, CUBLAS_OP_N, n, sub_n, &alpha_one, d_V_sub, n, d_v, 1, &beta_cublas, d_wUV, 1);
                     cudaDeviceSynchronize();
 
                     // V_sub = V_sub - beta * wV * v^T（右乘 GER）
-                    update_ortho_kernel<<<grid_ger_V, block_size>>>(d_V_sub, d_wUV, d_v, beta, n, sub_n, n);
+                    cublasDger(handle, n, sub_n, &alpha_neg_beta, d_wUV, 1, d_v, 1, d_V_sub, n);
                     cudaDeviceSynchronize();
                 }
             }
@@ -300,6 +248,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
     }
 
     // 释放 GPU 内存
+    cublasDestroy(handle);
     cudaFree(d_B);
     cudaFree(d_U);
     cudaFree(d_V);

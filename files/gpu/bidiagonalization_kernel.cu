@@ -31,7 +31,7 @@ static double vector_norm(const std::vector<double> &v)
     return std::sqrt(sum);
 }
 
-// 手写 kernel：计算 w = v^T * B_sub（左乘 GEMV）
+// 计算 w = v^T * B_sub（左乘 GEMV）
 __global__ void gemv_left_kernel(const double *B, double *w, const double *v, int m, int n, int lda) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     if (j >= n) return;
@@ -42,7 +42,7 @@ __global__ void gemv_left_kernel(const double *B, double *w, const double *v, in
     w[j] = sum;
 }
 
-// 手写 kernel：计算 w = B_sub * v（右乘 GEMV）
+// 计算 w = B_sub * v（右乘 GEMV）
 __global__ void gemv_right_kernel(const double *B, double *w, const double *v, int m, int n, int lda) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= m) return;
@@ -53,7 +53,7 @@ __global__ void gemv_right_kernel(const double *B, double *w, const double *v, i
     w[i] = sum;
 }
 
-// 手写 kernel：更新 B_sub = B_sub - beta * v * w^T（左乘 GER）
+// 更新 B_sub = B_sub - beta * v * w^T（左乘 GER）
 __global__ void ger_left_kernel(double *B, const double *v, const double *w, double beta, int m, int n, int lda) {
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
@@ -61,7 +61,7 @@ __global__ void ger_left_kernel(double *B, const double *v, const double *w, dou
     B[i + j * lda] -= beta * v[i] * w[j];
 }
 
-// 手写 kernel：更新 B_sub = B_sub - beta * w * v^T（右乘 GER）
+// 更新 B_sub = B_sub - beta * w * v^T（右乘 GER）
 __global__ void ger_right_kernel(double *B, const double *w, const double *v, double beta, int m, int n, int lda) {
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
@@ -69,7 +69,7 @@ __global__ void ger_right_kernel(double *B, const double *w, const double *v, do
     B[i + j * lda] -= beta * w[i] * v[j];
 }
 
-// 手写 kernel：累积正交矩阵 U 或 V
+// 累积正交矩阵 U 或 V
 __global__ void update_ortho_kernel(double *Q, const double *wQ, const double *v, double beta, int m, int n, int lda) {
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
