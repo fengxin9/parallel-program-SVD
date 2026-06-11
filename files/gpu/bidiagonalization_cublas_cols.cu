@@ -22,7 +22,6 @@
 #include <vector>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
-#include <iostream>
 
 // 辅助函数，计算向量的范数（平方和开根）
 static double vector_norm(const std::vector<double> &v)
@@ -66,16 +65,6 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
     cudaMalloc(&d_w, m * sizeof(double));
     cudaMalloc(&d_wUV, m * sizeof(double));
 
-    // 全局计时变量
-    static float h2d_total = 0.0f;
-    static float d2h_total = 0.0f;
-    static int copy_count = 0;
-    // 使用CUDA事件计时
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    float elapsed = 0.0f;
-
     // 将 B、U、V 转换为列主序并拷贝到 GPU
     std::vector<double> B_col(m * n);
     for (int i = 0; i < m; ++i) {
@@ -83,13 +72,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
             B_col[j * m + i] = B.at(i, j);
         }
     }
-    cudaEventRecord(start, 0);
     cudaMemcpy(d_B, B_col.data(), m * n * sizeof(double), cudaMemcpyHostToDevice);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsed, start, stop);
-    h2d_total += elapsed; 
-    copy_count++;
 
     std::vector<double> U_col(m * m);
     for (int i = 0; i < m; ++i) {
@@ -97,13 +80,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
             U_col[j * m + i] = U.at(i, j);
         }
     }
-    cudaEventRecord(start, 0);
     cudaMemcpy(d_U, U_col.data(), m * m * sizeof(double), cudaMemcpyHostToDevice);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsed, start, stop);
-    h2d_total += elapsed; 
-    copy_count++;
 
     std::vector<double> V_col(n * n);
     for (int i = 0; i < n; ++i) {
@@ -111,13 +88,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
             V_col[j * n + i] = V.at(i, j);
         }
     }
-    cudaEventRecord(start, 0);
     cudaMemcpy(d_V, V_col.data(), n * n * sizeof(double), cudaMemcpyHostToDevice);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsed, start, stop);
-    h2d_total += elapsed; 
-    copy_count++;
 
     for (int k = 0; k < n; ++k)
     {
@@ -128,13 +99,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
         // 提取第 k 列从第 k 行往下的子向量
         std::vector<double> x(m - k);
         for (int i = 0; i < m - k; ++i) {
-            cudaEventRecord(start, 0);
             cudaMemcpy(&x[i], d_B + (k + i) + k * m, sizeof(double), cudaMemcpyDeviceToHost);
-            cudaEventRecord(stop, 0);
-            cudaEventSynchronize(stop);
-            cudaEventElapsedTime(&elapsed, start, stop);
-            d2h_total += elapsed; 
-            copy_count++;
         }
 
         double norm_x = vector_norm(x);
@@ -158,13 +123,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                 double *d_B_sub = d_B + k + k * m;
 
                 // 拷贝 v 到 GPU
-                cudaEventRecord(start, 0);
                 cudaMemcpy(d_v, v.data(), sub_m * sizeof(double), cudaMemcpyHostToDevice);
-                cudaEventRecord(stop, 0);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&elapsed, start, stop);
-                h2d_total += elapsed;
-                copy_count++;
 
                 double alpha_one = 1.0;
                 double alpha_neg_beta = -beta;
@@ -195,13 +154,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
         // 清除第 k 列中对角线以下的元素（GPU 上置零）
         for (int i = k + 1; i < m; ++i) {
             double zero = 0.0;
-            cudaEventRecord(start, 0);
             cudaMemcpy(d_B + i + k * m, &zero, sizeof(double), cudaMemcpyHostToDevice);
-            cudaEventRecord(stop, 0);
-            cudaEventSynchronize(stop);
-            cudaEventElapsedTime(&elapsed, start, stop);
-            h2d_total += elapsed;
-            copy_count++;
         }
 
         // ================================================================
@@ -213,13 +166,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
             // 提取第 k 行从第 k+1 列往右的子向量
             std::vector<double> y(n - k - 1);
             for (int j = 0; j < n - k - 1; ++j) {
-                cudaEventRecord(start, 0);
                 cudaMemcpy(&y[j], d_B + k + (k + 1 + j) * m, sizeof(double), cudaMemcpyDeviceToHost);
-                cudaEventRecord(stop, 0);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&elapsed, start, stop);
-                d2h_total += elapsed;
-                copy_count++;
             }
 
             double norm_y = vector_norm(y);
@@ -243,13 +190,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                     double *d_B_sub = d_B + k + (k + 1) * m;
 
                     // 拷贝 v 到 GPU
-                    cudaEventRecord(start, 0);
                     cudaMemcpy(d_v, v.data(), sub_n * sizeof(double), cudaMemcpyHostToDevice);
-                    cudaEventRecord(stop, 0);
-                    cudaEventSynchronize(stop);
-                    cudaEventElapsedTime(&elapsed, start, stop);
-                    h2d_total += elapsed;
-                    copy_count++;
 
                     double alpha_one = 1.0;
                     double alpha_neg_beta = -beta;
@@ -279,60 +220,32 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
             // 强制置零（GPU 上）
             for (int j = k + 2; j < n; ++j) {
                 double zero = 0.0;
-                cudaEventRecord(start, 0);
                 cudaMemcpy(d_B + k + j * m, &zero, sizeof(double), cudaMemcpyHostToDevice);
-                cudaEventRecord(stop, 0);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&elapsed, start, stop);
-                h2d_total += elapsed;
-                copy_count++;
             }
         }
     }
 
     // 将结果从 GPU 拷回 CPU（列主序转行主序）
-    cudaEventRecord(start, 0);
     cudaMemcpy(B_col.data(), d_B, m * n * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsed, start, stop);
-    d2h_total += elapsed; 
-    copy_count++;
     for (int i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             B.at(i, j) = B_col[j * m + i];
         }
     }
 
-    cudaEventRecord(start, 0);
     cudaMemcpy(U_col.data(), d_U, m * m * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsed, start, stop);
-    d2h_total += elapsed; 
-    copy_count++;
     for (int i = 0; i < m; ++i) {
         for (int j = 0; j < m; ++j) {
             U.at(i, j) = U_col[j * m + i];
         }
     }
 
-    cudaEventRecord(start, 0);
     cudaMemcpy(V_col.data(), d_V, n * n * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsed, start, stop);
-    d2h_total += elapsed; 
-    copy_count++;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             V.at(i, j) = V_col[j * n + i];
         }
     }
-
-    std::cout << "H2D total: " << h2d_total << " ms, count: " << copy_count << std::endl;
-    std::cout << "D2H total: " << d2h_total << " ms, count: " << copy_count << std::endl;
-    std::cout << "Total: " << h2d_total + d2h_total << " ms, count: " << copy_count << std::endl;
 
     // 释放 GPU 内存
     cublasDestroy(handle);
@@ -342,10 +255,6 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
     cudaFree(d_v);
     cudaFree(d_w);
     cudaFree(d_wUV);
-
-    // 销毁 CUDA 事件
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
     return B;
 }
