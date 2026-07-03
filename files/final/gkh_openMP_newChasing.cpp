@@ -361,40 +361,69 @@ static std::vector<Block> chase_block_until_split(
     Matrix &U, Matrix &B, Matrix &V,
     Block blk, double tol, int max_inner_iter)
 {
-    if (blk.r <= blk.l) return;
+    std::vector<Block> result;
+    if (blk.r <= blk.l) return result;   // 1x1 块无需处理
 
     int iter = 0;
     while (iter < max_inner_iter) {
+        // 执行一步 bulge chasing
         one_block_step(U, B, V, blk.l, blk.r);
+
+        // 清理数值噪声，处理对角零元
         cleanup_bidiagonal(B, tol);
         handle_diagonal_zeros(U, B, V, tol);
 
-        // 检查当前块是否已被分割
+        // 获取当前整个矩阵的块划分（split_active_blocks 会置零超对角线小元素）
         auto all_blocks = split_active_blocks(B, B.cols(), tol);
-        
-        // 计算当前块范围内有多少非平凡子块
-        int count = 0;
+
+        // 筛选出完全位于当前块 [blk.l, blk.r] 内的非平凡子块
+        std::vector<Block> inside;
         for (const auto& sb : all_blocks) {
             if (sb.l >= blk.l && sb.r <= blk.r && sb.r > sb.l) {
-                count++;
-                // 只要有一个子块范围比原块小，说明发生了分割
-                if (sb.l > blk.l || sb.r < blk.r) {
-                    // 分割已发生，直接返回
-                    // 分割出的新子块会在下一轮外层循环被处理
-                    return;
-                }
+                inside.push_back(sb);
             }
         }
 
-        // 如果块内没有非平凡子块，说明已收敛为1x1
-        if (count == 0) {
-            return;
+        // 判断是否发生了分割
+        if (inside.empty()) {   // 原块已完全收敛为 1x1
+            return result;   // 返回空
+        }
+        if (inside.size() == 1 && inside[0].l == blk.l && inside[0].r == blk.r) {
+            // 仍未分割，继续下一轮迭代
+            ++iter;
+            continue;
         }
 
-        iter++;
+        // 分割发生，返回所有非平凡子块
+        return inside;
     }
+
+    // 达到最大迭代仍未分割，返回空
+    return result;
 }
 
+// 递归处理所有任务
+static void process_block_task(Block blk, Matrix &U, Matrix &B, Matrix &V,
+                               double tol, int max_inner_iter)
+{
+    auto new_blocks = chase_block_until_split(U, B, V, blk, tol, max_inner_iter);
+
+    // 检查是否返回了原块
+    bool is_original = (new_blocks.size() == 1 &&
+                        new_blocks[0].l == blk.l &&
+                        new_blocks[0].r == blk.r);
+
+    if (is_original) {  // 未分割，丢弃（外层循环会重新扫描）
+        return;
+    }
+
+    for (auto &nb : new_blocks) {
+        if (nb.r > nb.l) {
+            #pragma omp task shared(U, B, V)
+            process_block_task(nb, U, B, V, tol, max_inner_iter);
+        }
+    }
+}
 
 // 从“上二对角矩阵 B”出发执行 Golub-Kahan SVD 迭代（改进版）：
 // - 输入输出满足 A = U * B * V^T 不变；
@@ -434,10 +463,16 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
             break;
         }
 
-        // 并行处理：每个线程对一个块反复chase直到可分割
-        #pragma omp parallel for schedule(dynamic, 1)
-        for (int i = 0; i < (int)task_pool.size(); ++i) {
-            chase_block_until_split(U, B, V, task_pool[i], tol, 500);
+        // 并行处理所有非平凡块
+        #pragma omp parallel
+        {
+            #pragma omp single
+            {
+                for (auto &blk : task_pool) {
+                    #pragma omp task shared(U, B, V)
+                    process_block_task(blk, U, B, V, tol, inner_max_iter);
+                }
+            }
         }
     }
 
@@ -450,5 +485,3 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
 
     return true;
 }
-
-// bash test.sh 5 1 8 -O O2 -s 20260516
