@@ -356,26 +356,71 @@ namespace
 
 } // namespace
 
-// openMP版本的并行函数
-void process_blocks_parallel_openMP(Matrix& U, Matrix& B, Matrix& V, std::vector<Block>& blocks) {
-    int nblocks = blocks.size();
-    if (nblocks == 0) return;
+// 对一个块反复 bulge chasing 直至可分割
+static std::vector<Block> chase_block_until_split(
+    Matrix &U, Matrix &B, Matrix &V,
+    Block blk, double tol, int max_inner_iter)
+{
+    std::vector<Block> result;
+    if (blk.r <= blk.l) return result;   // 1x1 块无需处理
 
-    std::sort(blocks.begin(), blocks.end(), [](const Block& a, const Block& b) {
-        return (a.r - a.l) > (b.r - b.l);
-    });        // 先对子块排序
-    
-    int num_threads = 8;
-    
-    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 1)
-    // 使用openMP命令并行处理，自动进行任务调度
-    for (int i = 0; i < nblocks; ++i) {
-        if (blocks[i].r > blocks[i].l) {
-            // critical 指令自动处理数据竞争
-            #pragma omp critical
-            {
-                one_block_step(U, B, V, blocks[i].l, blocks[i].r);
+    int iter = 0;
+    while (iter < max_inner_iter) {
+        // 执行一步 bulge chasing
+        one_block_step(U, B, V, blk.l, blk.r);
+
+        // 清理数值噪声，处理对角零元
+        cleanup_bidiagonal(B, tol);
+        handle_diagonal_zeros(U, B, V, tol);
+
+        // 获取当前整个矩阵的块划分（split_active_blocks 会置零超对角线小元素）
+        auto all_blocks = split_active_blocks(B, B.cols(), tol);
+
+        // 筛选出完全位于当前块 [blk.l, blk.r] 内的非平凡子块
+        std::vector<Block> inside;
+        for (const auto& sb : all_blocks) {
+            if (sb.l >= blk.l && sb.r <= blk.r && sb.r > sb.l) {
+                inside.push_back(sb);
             }
+        }
+
+        // 判断是否发生了分割
+        if (inside.empty()) {   // 原块已完全收敛为 1x1
+            return result;   // 返回空
+        }
+        if (inside.size() == 1 && inside[0].l == blk.l && inside[0].r == blk.r) {
+            // 仍未分割，继续下一轮迭代
+            ++iter;
+            continue;
+        }
+
+        // 分割发生，返回所有非平凡子块
+        return inside;
+    }
+
+    // 达到最大迭代仍未分割，返回空
+    return result;
+}
+
+// 递归处理所有任务
+static void process_block_task(Block blk, Matrix &U, Matrix &B, Matrix &V,
+                               double tol, int max_inner_iter)
+{
+    auto new_blocks = chase_block_until_split(U, B, V, blk, tol, max_inner_iter);
+
+    // 检查是否返回了原块
+    bool is_original = (new_blocks.size() == 1 &&
+                        new_blocks[0].l == blk.l &&
+                        new_blocks[0].r == blk.r);
+
+    if (is_original) {  // 未分割，丢弃（外层循环会重新扫描）
+        return;
+    }
+
+    for (auto &nb : new_blocks) {
+        if (nb.r > nb.l) {
+            #pragma omp task shared(U, B, V)
+            process_block_task(nb, U, B, V, tol, max_inner_iter);
         }
     }
 }
@@ -389,61 +434,54 @@ bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, doub
     const int m = B.rows();
     const int n = B.cols();
 
-    if (m < n)
-    {
-        throw std::invalid_argument("gkh_svd_from_bidiagonal_v2: requires m >= n");
+    if (m < n) {
+        throw std::invalid_argument("gkh_svd_from_bidiagonal: requires m >= n");
     }
-    if (U.rows() != m || U.cols() != m)
-    {
-        throw std::invalid_argument("gkh_svd_from_bidiagonal_v2: U must be m x m");
+    if (U.rows() != m || U.cols() != m) {
+        throw std::invalid_argument("gkh_svd_from_bidiagonal: U must be m x m");
     }
-    if (V.rows() != n || V.cols() != n)
-    {
-        throw std::invalid_argument("gkh_svd_from_bidiagonal_v2: V must be n x n");
+    if (V.rows() != n || V.cols() != n) {
+        throw std::invalid_argument("gkh_svd_from_bidiagonal: V must be n x n");
     }
 
-    bool converged = false;
+    const int inner_max_iter = 500;
 
-    for (int iter = 0; iter < max_iter; ++iter)
-    {
-        // 清理数值噪声，并优先处理 d_k≈0 的特殊情形。
+    // 外层循环，持续处理直到全部收敛
+    for (int outer = 0; outer < max_iter; ++outer) {
         cleanup_bidiagonal(B, tol);
         handle_diagonal_zeros(U, B, V, tol);
+        auto blocks = split_active_blocks(B, n, tol);
 
-        // 根据超对角线断点拆分活动块
-        // 这里子矩阵间是相互独立的，所以此处具有很大的并行潜力：你可以尝试多线程/多进程进行处理
-        // 但根据算法，收集 Givens 旋转并更新 U/V 需要在每个块内顺序执行，所以这可能给并行带来麻烦。
-        std::vector<Block> blocks = split_active_blocks(B, n, tol);
-
-        // 若全部是 1x1 块，说明所有超对角都已收敛为 0。
-        bool all_singletons = true;
-        for (const auto &blk : blocks)
-        {
-            if (blk.r > blk.l)
-            {
-                all_singletons = false;
-                break;
+        std::vector<Block> task_pool;
+        for (const auto &blk : blocks) {
+            if (blk.r > blk.l) {
+                task_pool.push_back(blk);
             }
         }
 
-        if (all_singletons)
-        {
-            converged = true;
+        if (task_pool.empty()) {
             break;
         }
 
-        // 从右到左处理每个非平凡块，减少末端块对前面块的干扰。
-        // 使用 OpenMP 并行处理
-        process_blocks_parallel_openMP(U, B, V, blocks);
+        // 并行处理所有非平凡块
+        #pragma omp parallel
+        {
+            #pragma omp single
+            {
+                for (auto &blk : task_pool) {
+                    #pragma omp task shared(U, B, V)
+                    process_block_task(blk, U, B, V, tol, inner_max_iter);
+                }
+            }
+        }
     }
 
-    // 迭代结束后统一结构清理与标准化输出。
+    // 收尾
     cleanup_bidiagonal(B, tol);
-    for (int i = 0; i < n - 1; ++i)
-    {
+    for (int i = 0; i < n - 1; ++i) {
         B.at(i, i + 1) = 0.0;
     }
     make_nonnegative_and_sort(U, B, V);
 
-    return converged;
+    return true;
 }
