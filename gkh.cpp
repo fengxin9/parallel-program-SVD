@@ -6,6 +6,8 @@
 #include <limits>
 #include <stdexcept>
 #include <vector>
+#include <arm_neon.h>
+#include <omp.h>
 
 namespace
 {
@@ -23,7 +25,30 @@ namespace
     // 这类逐元素线性组合很适合向量化，SIMD/多线程中你也可以顺手的事把他们做了。
     static void apply_left_rows(Matrix &M, int r0, int r1, double c, double s)
     {
-        for (int j = 0; j < M.cols(); ++j)
+        int cols = M.cols();
+        float64x2_t simd_c = vdupq_n_f64(c);
+        float64x2_t simd_s = vdupq_n_f64(s);
+        float64x2_t neg_simd_s = vnegq_f64(simd_s);
+        
+        int j = 0;
+        for (; j + 1 < cols; j += 2)   // 一次处理2列
+        {
+            float64x2_t a = vld1q_f64(&M.at(r0, j));
+            float64x2_t b = vld1q_f64(&M.at(r1, j));
+            
+            // new_a = c * a + s * b
+            // 使用vmlaq_f64融合乘加指令，先计算simd_s*b，再加simd_c*a
+            float64x2_t new_a = vfmaq_f64(vmulq_f64(simd_s, b), simd_c, a);
+            
+            // new_b = -s * a + c * b
+            float64x2_t new_b = vfmaq_f64(vmulq_f64(neg_simd_s, a), simd_c, b);
+            
+            // 存储结果
+            vst1q_f64(&M.at(r0, j), new_a);
+            vst1q_f64(&M.at(r1, j), new_b);
+        }
+     
+        for (; j < cols; ++j)    // 处理剩余列
         {
             double a = M.at(r0, j);
             double b = M.at(r1, j);
@@ -36,7 +61,34 @@ namespace
     // 即 M <- M * R，其中 R 只作用在第 c0/c1 两列上。
     static void apply_right_cols(Matrix &M, int c0, int c1, double c, double s)
     {
-        for (int i = 0; i < M.rows(); ++i)
+        int rows = M.rows();
+        int i = 0;
+        // 四路循环展开
+        for (; i + 3 < rows; i += 4)
+        {
+            double a0 = M.at(i, c0);
+            double b0 = M.at(i, c1);
+            M.at(i, c0) = a0 * c - b0 * s;
+            M.at(i, c1) = a0 * s + b0 * c;
+            
+            double a1 = M.at(i + 1, c0);
+            double b1 = M.at(i + 1, c1);
+            M.at(i + 1, c0) = a1 * c - b1 * s;
+            M.at(i + 1, c1) = a1 * s + b1 * c;
+            
+            double a2 = M.at(i + 2, c0);
+            double b2 = M.at(i + 2, c1);
+            M.at(i + 2, c0) = a2 * c - b2 * s;
+            M.at(i + 2, c1) = a2 * s + b2 * c;
+            
+            double a3 = M.at(i + 3, c0);
+            double b3 = M.at(i + 3, c1);
+            M.at(i + 3, c0) = a3 * c - b3 * s;
+            M.at(i + 3, c1) = a3 * s + b3 * c;
+        }
+        
+        // 处理剩余行
+        for (; i < rows; ++i)
         {
             double a = M.at(i, c0);
             double b = M.at(i, c1);
@@ -304,75 +356,130 @@ namespace
 
 } // namespace
 
-// 从“上二对角矩阵 B”出发执行 Golub-Kahan SVD 迭代（改进版）：
-// - 输入输出满足 A = U * B * V^T 不变；
-// - 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
-// - 成功收敛后，B 被整理为非负且降序的对角矩阵（其对角元即奇异值）。
+// 对一个块反复 bulge chasing 直至可分割
+static std::vector<Block> chase_block_until_split(Matrix &U, Matrix &B, Matrix &V,
+Block blk, double tol, int max_inner_iter)
+{
+    std::vector<Block> result;
+    if (blk.r <= blk.l) return result;   // 1x1 块无需处理
+
+    int iter = 0;
+    while (iter < max_inner_iter) {
+        // 执行一步 bulge chasing
+        one_block_step(U, B, V, blk.l, blk.r);
+
+        // 清理数值噪声，处理对角零元
+        cleanup_bidiagonal(B, tol);
+        handle_diagonal_zeros(U, B, V, tol);
+
+        // 获取当前整个矩阵的块划分（split_active_blocks 会置零超对角线小元素）
+        auto all_blocks = split_active_blocks(B, B.cols(), tol);
+
+        // 筛选出完全位于当前块 [blk.l, blk.r] 内的非平凡子块
+        std::vector<Block> inside;
+        for (const auto& sb : all_blocks) {
+            if (sb.l >= blk.l && sb.r <= blk.r && sb.r > sb.l) {
+                inside.push_back(sb);
+            }
+        }
+
+        // 判断是否发生了分割
+        if (inside.empty()) {   // 原块已完全收敛为 1x1
+            return result;   // 返回空
+        }
+        if (inside.size() == 1 && inside[0].l == blk.l && inside[0].r == blk.r) {
+            // 仍未分割，继续下一轮迭代
+            ++iter;
+            continue;
+        }
+
+        // 分割发生，返回所有非平凡子块
+        return inside;
+    }
+
+    // 达到最大迭代仍未分割，返回空
+    return result;
+}
+
+// 递归处理所有任务
+static void process_block_task(Block blk, Matrix &U, Matrix &B, Matrix &V,
+                               double tol, int max_inner_iter)
+{
+    auto new_blocks = chase_block_until_split(U, B, V, blk, tol, max_inner_iter);
+
+    // 检查是否返回了原块
+    bool is_original = (new_blocks.size() == 1 &&
+                        new_blocks[0].l == blk.l &&
+                        new_blocks[0].r == blk.r);
+
+    if (is_original) {  // 未分割，丢弃（外层循环会重新扫描）
+        return;
+    }
+
+    for (auto &nb : new_blocks) {
+        if (nb.r > nb.l) {
+            #pragma omp task shared(U, B, V)
+            process_block_task(nb, U, B, V, tol, max_inner_iter);
+        }
+    }
+}
+
+// 输入输出满足 A = U * B * V^T 不变；
+// 迭代中自动分块、处理对角近零、并在每个活动块上做 bulge chasing；
+// 成功收敛后，B 被整理为非负且降序的对角矩阵（其对角元即奇异值）
 bool gkh_svd_from_bidiagonal(Matrix &U, Matrix &B, Matrix &V, int max_iter, double tol)
 {
     const int m = B.rows();
     const int n = B.cols();
 
-    if (m < n)
-    {
-        throw std::invalid_argument("gkh_svd_from_bidiagonal_v2: requires m >= n");
+    if (m < n) {
+        throw std::invalid_argument("gkh_svd_from_bidiagonal: requires m >= n");
     }
-    if (U.rows() != m || U.cols() != m)
-    {
-        throw std::invalid_argument("gkh_svd_from_bidiagonal_v2: U must be m x m");
+    if (U.rows() != m || U.cols() != m) {
+        throw std::invalid_argument("gkh_svd_from_bidiagonal: U must be m x m");
     }
-    if (V.rows() != n || V.cols() != n)
-    {
-        throw std::invalid_argument("gkh_svd_from_bidiagonal_v2: V must be n x n");
+    if (V.rows() != n || V.cols() != n) {
+        throw std::invalid_argument("gkh_svd_from_bidiagonal: V must be n x n");
     }
 
-    bool converged = false;
+    const int inner_max_iter = 500;
 
-    for (int iter = 0; iter < max_iter; ++iter)
-    {
-        // 清理数值噪声，并优先处理 d_k≈0 的特殊情形。
+    // 外层循环，持续处理直到全部收敛
+    for (int outer = 0; outer < max_iter; ++outer) {
         cleanup_bidiagonal(B, tol);
         handle_diagonal_zeros(U, B, V, tol);
+        auto blocks = split_active_blocks(B, n, tol);
 
-        // 根据超对角线断点拆分活动块
-        // 这里子矩阵间是相互独立的，所以此处具有很大的并行潜力：你可以尝试多线程/多进程进行处理
-        // 但根据算法，收集 Givens 旋转并更新 U/V 需要在每个块内顺序执行，所以这可能给并行带来麻烦。
-        std::vector<Block> blocks = split_active_blocks(B, n, tol);
-
-        // 若全部是 1x1 块，说明所有超对角都已收敛为 0。
-        bool all_singletons = true;
-        for (const auto &blk : blocks)
-        {
-            if (blk.r > blk.l)
-            {
-                all_singletons = false;
-                break;
+        std::vector<Block> task_pool;
+        for (const auto &blk : blocks) {
+            if (blk.r > blk.l) {
+                task_pool.push_back(blk);
             }
         }
 
-        if (all_singletons)
-        {
-            converged = true;
+        if (task_pool.empty()) {
             break;
         }
 
-        // 从右到左处理每个非平凡块，减少末端块对前面块的干扰。
-        for (int i = static_cast<int>(blocks.size()) - 1; i >= 0; --i)
+        // 并行处理所有非平凡块
+        #pragma omp parallel
         {
-            if (blocks[i].r > blocks[i].l)
+            #pragma omp single
             {
-                one_block_step(U, B, V, blocks[i].l, blocks[i].r);
+                for (auto &blk : task_pool) {
+                    #pragma omp task shared(U, B, V)
+                    process_block_task(blk, U, B, V, tol, inner_max_iter);
+                }
             }
         }
     }
 
-    // 迭代结束后统一结构清理与标准化输出。
+    // 收尾
     cleanup_bidiagonal(B, tol);
-    for (int i = 0; i < n - 1; ++i)
-    {
+    for (int i = 0; i < n - 1; ++i) {
         B.at(i, i + 1) = 0.0;
     }
     make_nonnegative_and_sort(U, B, V);
 
-    return converged;
+    return true;
 }

@@ -247,7 +247,7 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                     }
 
                     // 2. 分块更新 B = B - beta * w * v^T
-                    #pragma omp parallel for schedule(dynamic, 1)
+                    #pragma omp parallel for schedule(dynamic)
                     for (int bi = 0; bi < rows; bi += BLOCK)
                     {
                         int row_end = std::min(bi + BLOCK, rows);

@@ -20,6 +20,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
+#include <arm_neon.h>
 
 // 辅助函数，计算向量的范数（平方和开根）
 static double vector_norm(const std::vector<double> &v)
@@ -89,22 +90,93 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                 // 手册里的 Householder 矩阵定义为 H = I - beta * v * v^T，其中 beta = 2 / (v^T v)
                 // 从左侧作用 H：B_new = H * B_old = B_old - beta * v * (v^T * B_old)
                 std::vector<double> w(n - k, 0.0);
-                for (int j = 0; j < n - k; ++j)
-                    for (int i = 0; i < m - k; ++i)
-                        w[j] += v[i] * B.at(k + i, k + j);
+                // 1.计算 w = v^T * B_old
+                int j = 0;
+                for (; j + 1 < n - k; j += 2)
+                {
+                    float64x2_t sum = vdupq_n_f64(0.0);
+                    for (int i = 0; i < m - k; i++)
+                    {
+                        float64x2_t vi = vdupq_n_f64(v[i]);
+                        float64x2_t bj = vld1q_f64(&B.at(k + i, k + j));
+                        sum = vfmaq_f64(sum, vi, bj);  // sum += vi * bj
+                    }
+                    vst1q_f64(&w[j], sum);
+                }
+                // 处理剩余列
+                for (; j < n - k; j++)
+                {
+                    double sum = 0.0;
+                    for (int i = 0; i < m-k; i++)
+                        sum += v[i] * B.at(k + i, k + j);
+                    w[j] = sum;
+                }
+
+                // 2.更新 B：B_new = B_old - beta * v * w
+                float64x2_t vbeta = vdupq_n_f64(beta);
                 for (int i = 0; i < m - k; ++i)
-                    for (int j = 0; j < n - k; ++j)
+                {
+                    float64x2_t vi = vdupq_n_f64(v[i]);
+                    float64x2_t vbeta_vi = vmulq_f64(vbeta, vi);
+                    
+                    int j = 0;
+                    for (; j + 1 < n - k; j += 2)
+                    {
+                        float64x2_t wj = vld1q_f64(&w[j]);
+                        float64x2_t update = vmulq_f64(vbeta_vi, wj);
+                        float64x2_t bval = vld1q_f64(&B.at(k + i, k + j));
+                        bval = vsubq_f64(bval, update);        // bval -= beta * v[i] * w[j]
+                        vst1q_f64(&B.at(k + i, k + j), bval);  // 将更新后的值写回矩阵
+                    }
+                    for (; j < n - k; ++j)
+                    {
                         B.at(k + i, k + j) -= beta * v[i] * w[j];
+                    }
+                }
 
                 // 累积 U：U_new = U_old * H_k
                 // U[:, k:m] -= beta * (U[:, k:m] * v) * v^T
                 std::vector<double> wU(m, 0.0);
+
+                // 3.计算 wU = U_old * v
                 for (int i = 0; i < m; ++i)
-                    for (int j = 0; j < m - k; ++j)
+                {
+                    float64x2_t sum = vdupq_n_f64(0.0);
+                    int j = 0;
+                    for (; j + 1 < m - k; j += 2)
+                    {
+                        float64x2_t vj = vld1q_f64(&v[j]);
+                        float64x2_t uj = vld1q_f64(&U.at(i, k + j));
+                        sum = vfmaq_f64(sum, uj, vj);   // sum += U.at(i, k + j) * v[j]
+                    }
+                    wU[i] = vaddvq_f64(sum);  // 将奇数列和偶数列的和相加
+                    // 处理剩余列
+                    for (; j < m - k; ++j)
+                    {
                         wU[i] += U.at(i, k + j) * v[j];
+                    }
+                }
+
+                // 4.更新 U：U_new = U_old - beta * wU * v^T
                 for (int i = 0; i < m; ++i)
-                    for (int j = 0; j < m - k; ++j)
+                {
+                    float64x2_t vbeta_wU = vdupq_n_f64(beta * wU[i]);
+                    
+                    int j = 0;
+                    for (; j + 1 < m - k; j += 2)
+                    {
+                        float64x2_t vj = vld1q_f64(&v[j]);
+                        float64x2_t update = vmulq_f64(vbeta_wU, vj);
+                        float64x2_t uval = vld1q_f64(&U.at(i, k + j));
+                        uval = vsubq_f64(uval, update);
+                        vst1q_f64(&U.at(i, k + j), uval);
+                    }
+                    // 处理剩余列
+                    for (; j < m - k; ++j)
+                    {
                         U.at(i, k + j) -= beta * wU[i] * v[j];
+                    }
+                }
             }
         }
 
@@ -152,22 +224,84 @@ Matrix to_bidiagonal(const Matrix &A, Matrix &U, Matrix &V)
                     // 注意：这里是从右侧作用 V_k
                     // B_new = B_old * V_k = B_old - beta * (B_old * v) * v^T
                     std::vector<double> w(m - k, 0.0);
+                    // 1.计算 w = B_old * v
                     for (int i = 0; i < m - k; ++i)
-                        for (int j = 0; j < n - k - 1; ++j)
+                    {
+                        float64x2_t sum = vdupq_n_f64(0.0);
+                        int j = 0;
+                        for (; j + 1 < n - k - 1; j += 2)
+                        {
+                            float64x2_t vj = vld1q_f64(&v[j]);
+                            float64x2_t bj = vld1q_f64(&B.at(k + i, k + 1 + j));
+                            sum = vfmaq_f64(sum, bj, vj);
+                        }
+                        w[i] = vaddvq_f64(sum);
+                        // 处理剩余列
+                        for (; j < n - k - 1; ++j)
                             w[i] += B.at(k + i, k + 1 + j) * v[j];
+                    }
+
+                    // 2.更新 B：B_new = B_old - beta * w * v^T
+                    float64x2_t vbeta = vdupq_n_f64(beta);
                     for (int i = 0; i < m - k; ++i)
-                        for (int j = 0; j < n - k - 1; ++j)
+                    {
+                        float64x2_t vbeta_w = vdupq_n_f64(beta * w[i]);
+                        
+                        int j = 0;
+                        for (; j + 1 < n - k - 1; j += 2)
+                        {
+                            float64x2_t vj = vld1q_f64(&v[j]);
+                            float64x2_t update = vmulq_f64(vbeta_w, vj);
+                            float64x2_t bval = vld1q_f64(&B.at(k + i, k + 1 + j));
+                            bval = vsubq_f64(bval, update);
+                            vst1q_f64(&B.at(k + i, k + 1 + j), bval);
+                        }
+                        for (; j < n - k - 1; ++j)
+                        {
                             B.at(k + i, k + 1 + j) -= beta * w[i] * v[j];
+                        }
+                    }
 
                     // 累积 V：V_new = V_old * V_k
                     // V[:, k+1:n] -= beta * (V[:, k+1:n] * v) * v^T
                     std::vector<double> wV(n, 0.0);
+                    // 3.计算 wV = V * v
                     for (int i = 0; i < n; ++i)
-                        for (int j = 0; j < n - k - 1; ++j)
+                    {
+                        float64x2_t sum = vdupq_n_f64(0.0);
+                        int j = 0;
+                        for (; j + 1 < n - k - 1; j += 2)
+                        {
+                            float64x2_t vj = vld1q_f64(&v[j]);
+                            float64x2_t vv = vld1q_f64(&V.at(i, k + 1 + j));
+                            sum = vfmaq_f64(sum, vv, vj);
+                        }
+                        wV[i] = vaddvq_f64(sum);
+                        for (; j < n - k - 1; ++j)
+                        {   // 处理剩余列
                             wV[i] += V.at(i, k + 1 + j) * v[j];
+                        }
+                    }
+
+                    // 4.更新 V：V_new = V_old - beta * wV * v^T
                     for (int i = 0; i < n; ++i)
-                        for (int j = 0; j < n - k - 1; ++j)
+                    {
+                        float64x2_t vbeta_wV = vdupq_n_f64(beta * wV[i]);
+                        
+                        int j = 0;
+                        for (; j + 1 < n - k - 1; j += 2)
+                        {
+                            float64x2_t vj = vld1q_f64(&v[j]);
+                            float64x2_t update = vmulq_f64(vbeta_wV, vj);
+                            float64x2_t vval = vld1q_f64(&V.at(i, k + 1 + j));
+                            vval = vsubq_f64(vval, update);
+                            vst1q_f64(&V.at(i, k + 1 + j), vval);
+                        }
+                        for (; j < n - k - 1; ++j)
+                        {
                             V.at(i, k + 1 + j) -= beta * wV[i] * v[j];
+                        }
+                    }
                 }
             }
 
